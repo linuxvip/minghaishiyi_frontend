@@ -1,9 +1,7 @@
 
-import React, { useState, useMemo, useEffect, useCallback } from 'react';
-import { MOCK_CASES } from '../data/caseLibrary';
+import React, { useState, useEffect, useCallback } from 'react';
 import { CaseRecord, Gender } from '../types';
-import { Book, Zap, Tags, X, Filter, Trash2, Search, Loader2, Database, AlertCircle, ChevronDown, Sparkles } from 'lucide-react';
-// Added HEAVENLY_STEMS and EARTHLY_BRANCHES to imports for the pillar filter selection
+import { Zap, Trash2, Search, Loader2, Database, AlertCircle, ChevronDown, Sparkles } from 'lucide-react';
 import { ELEMENT_COLORS, STEM_ELEMENTS, BRANCH_ELEMENTS, HEAVENLY_STEMS, EARTHLY_BRANCHES } from '../constants';
 
 /**
@@ -40,7 +38,7 @@ const CaseLibrary: React.FC<CaseLibraryProps> = ({ onSelectCase }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [isAppending, setIsAppending] = useState(false);
   const [nextUrl, setNextUrl] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<boolean>(false);
 
   const [filterGender, setFilterGender] = useState<string>('ALL');
   const [pillarFilters, setPillarFilters] = useState({
@@ -61,18 +59,12 @@ const CaseLibrary: React.FC<CaseLibraryProps> = ({ onSelectCase }) => {
     return (v === '1' || v === '男' || v === '乾') ? Gender.MALE : Gender.FEMALE;
   };
 
-  /**
-   * 规范化后端返回的分页 URL
-   * 后端通常会返回绝对路径 (如 http://127.0.0.1:8000/api/...)
-   * 在浏览器端我们需要将其转换为相对路径 /api/... 才能通过 Nginx 转发
-   */
   const normalizeUrl = (url: string) => {
     if (!url) return url;
     try {
       const urlObj = new URL(url);
       return urlObj.pathname + urlObj.search;
     } catch (e) {
-      // 如果已经是相对路径
       return url.startsWith('/api') ? url : `/api${url}`;
     }
   };
@@ -81,7 +73,7 @@ const CaseLibrary: React.FC<CaseLibraryProps> = ({ onSelectCase }) => {
     if (isLoadMore) setIsAppending(true);
     else setIsLoading(true);
     
-    setError(null);
+    setError(false);
 
     try {
       const params = new URLSearchParams();
@@ -92,7 +84,6 @@ const CaseLibrary: React.FC<CaseLibraryProps> = ({ onSelectCase }) => {
       if (pillarFilters.hour) params.append('hour_ganzhi', pillarFilters.hour);
       params.append('page_size', '12');
 
-      // 构造请求路径
       let targetUrl = '';
       if (isLoadMore && nextUrl) {
         targetUrl = normalizeUrl(nextUrl);
@@ -108,7 +99,7 @@ const CaseLibrary: React.FC<CaseLibraryProps> = ({ onSelectCase }) => {
       
       const data = await response.json();
 
-      const normalizedResults: CaseRecord[] = data.results.map((item: any) => ({
+      const normalizedResults: CaseRecord[] = (data.results || []).map((item: any) => ({
         id: String(item.id),
         source: item.source || '未知来源',
         gender: mapApiToGender(item.gender),
@@ -129,9 +120,10 @@ const CaseLibrary: React.FC<CaseLibraryProps> = ({ onSelectCase }) => {
       setTotalCount(data.count || 0);
       setNextUrl(data.next);
     } catch (err) {
-      console.warn('[CaseLibrary] Connection failed, fallback to mock data.', err);
+      console.warn('[CaseLibrary] Connection failed.', err);
+      setError(true);
       if (!isLoadMore) {
-        setCases(MOCK_CASES);
+        setCases([]);
       }
     } finally {
       setIsLoading(false);
@@ -155,6 +147,7 @@ const CaseLibrary: React.FC<CaseLibraryProps> = ({ onSelectCase }) => {
 
   return (
     <div className="flex flex-col gap-5 animate-fade-in">
+      {/* 筛选面板 */}
       <div className="bg-white p-6 rounded-[2.5rem] border border-stone-200 shadow-sm flex flex-col gap-6">
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
           <div className="flex items-center gap-3">
@@ -203,10 +196,9 @@ const CaseLibrary: React.FC<CaseLibraryProps> = ({ onSelectCase }) => {
           ))}
         </div>
 
-        {/* 匹配统计信息，放置在筛选条件下方 */}
         <div className="flex items-center justify-between px-1">
            <div className="flex items-center gap-2">
-              <div className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></div>
+              <div className={`w-1.5 h-1.5 rounded-full ${isLoading ? 'bg-amber-400 animate-pulse' : 'bg-amber-500'}`}></div>
               <span className="text-[11px] font-bold text-stone-400">
                 {isLoading ? '正在检索命例...' : `匹配到 ${totalCount} 条命例`}
               </span>
@@ -224,13 +216,7 @@ const CaseLibrary: React.FC<CaseLibraryProps> = ({ onSelectCase }) => {
         </div>
       </div>
 
-      {error && (
-        <div className="bg-rose-50 p-4 rounded-2xl border border-rose-100 flex items-center gap-3 text-rose-800">
-          <AlertCircle size={18} />
-          <p className="text-xs font-bold">{error}</p>
-        </div>
-      )}
-
+      {/* 命例列表区域 */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {cases.map((c) => (
           <div 
@@ -252,7 +238,6 @@ const CaseLibrary: React.FC<CaseLibraryProps> = ({ onSelectCase }) => {
                     </div>
                   </div>
                 </div>
-                {/* 增加说明文字和图标组合，图标在前，文字在后，改为按钮样式并默认显示 */}
                 <div className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-50 border border-amber-200/50 rounded-xl text-amber-600 group-hover:bg-amber-100 group-hover:text-amber-700 transition-all duration-300 shadow-sm group-hover:shadow-md active:scale-95">
                   <Zap size={14} className="fill-amber-500/10" />
                   <span className="text-[10px] font-bold tracking-tight">命例排盘</span>
@@ -266,7 +251,6 @@ const CaseLibrary: React.FC<CaseLibraryProps> = ({ onSelectCase }) => {
                 <MiniPillar gan={c.hourGZ[0]} zhi={c.hourGZ[1]} />
              </div>
 
-             {/* 修改点：去除 italic 类，去除引号包裹，保留 line-clamp-2 以确保超出显示省略号 */}
              <p className="text-xs text-stone-500 leading-relaxed line-clamp-2">
                {c.feedback}
              </p>
@@ -274,6 +258,7 @@ const CaseLibrary: React.FC<CaseLibraryProps> = ({ onSelectCase }) => {
         ))}
       </div>
 
+      {/* 加载状态 */}
       {isLoading && !isAppending && (
         <div className="flex flex-col items-center justify-center py-20 gap-4">
           <Loader2 className="animate-spin text-stone-300" size={32} />
@@ -281,17 +266,27 @@ const CaseLibrary: React.FC<CaseLibraryProps> = ({ onSelectCase }) => {
         </div>
       )}
 
-      {!isLoading && cases.length === 0 && (
-        <div className="bg-white rounded-[2.5rem] p-20 border border-stone-200 border-dashed flex flex-col items-center justify-center text-center">
-           <div className="w-16 h-16 bg-stone-50 rounded-full flex items-center justify-center text-stone-200 mb-4">
-              <Search size={32} />
+      {/* 无数据或错误状态：系统维护提示 */}
+      {!isLoading && (error || cases.length === 0) && (
+        <div className="bg-white rounded-[2.5rem] p-16 md:p-24 border border-stone-200 border-dashed flex flex-col items-center justify-center text-center animate-fade-in shadow-inner">
+           <div className="w-16 h-16 bg-stone-50 rounded-full flex items-center justify-center text-stone-200 mb-5">
+              {error ? <AlertCircle size={32} /> : <Sparkles size={32} />}
            </div>
-           <h3 className="text-stone-400 font-bold">未找到相关命例</h3>
-           <p className="text-stone-300 text-xs mt-1">尝试调整筛选条件或搜索关键词</p>
+           <h3 className="text-stone-400 font-bold text-lg">系统正常维护中</h3>
+           <p className="text-stone-300 text-sm mt-2 tracking-widest font-serif italic">期待更好相遇</p>
+           {isFiltered && !error && (
+             <button 
+               onClick={resetFilters}
+               className="mt-6 text-amber-600 text-xs font-bold hover:underline"
+             >
+               尝试清除筛选条件
+             </button>
+           )}
         </div>
       )}
 
-      {nextUrl && (
+      {/* 加载更多 */}
+      {nextUrl && !error && (
         <button 
           onClick={() => fetchCases(true)}
           disabled={isAppending}
@@ -314,5 +309,4 @@ const CaseLibrary: React.FC<CaseLibraryProps> = ({ onSelectCase }) => {
   );
 };
 
-// Fixed: Add default export to fix the error "Module has no default export" in App.tsx
 export default CaseLibrary;
