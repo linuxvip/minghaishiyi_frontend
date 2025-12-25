@@ -269,14 +269,14 @@ const CaseLibrary: React.FC<CaseLibraryProps> = ({ onSelectCase, filters, onFilt
         </div>
       )}
 
-      {/* 无数据或错误状态：系统维护提示 */}
+      {/* 无数据或错误状态 */}
       {!isLoading && (error || cases.length === 0) && (
         <div className="bg-white rounded-[2.5rem] py-12 px-8 md:py-20 border border-stone-200 border-dashed flex flex-col items-center justify-center text-center animate-fade-in shadow-inner">
            <div className="w-16 h-16 bg-stone-50 rounded-full flex items-center justify-center text-stone-200 mb-5">
               {error ? <AlertCircle size={32} /> : <Sparkles size={32} />}
            </div>
-           <h3 className="text-stone-400 font-bold text-lg">系统正常维护中</h3>
-           <p className="text-stone-300 text-sm mt-2 tracking-widest font-serif italic">期待更好相遇</p>
+           <h3 className="text-stone-400 font-bold text-lg">系统中当前无匹配记录</h3>
+           <p className="text-stone-300 text-sm mt-2 tracking-widest font-serif italic">命海拾遗</p>
            {isFiltered && !error && (
              <button 
                onClick={resetFilters}
