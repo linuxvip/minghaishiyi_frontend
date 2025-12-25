@@ -3,7 +3,14 @@ import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { MOCK_CASES } from '../data/caseLibrary';
 import { CaseRecord, Gender } from '../types';
 import { Book, Zap, Tags, X, Filter, Trash2, Search, Loader2, Database, AlertCircle, ChevronDown, Sparkles } from 'lucide-react';
-import { ELEMENT_COLORS, STEM_ELEMENTS, BRANCH_ELEMENTS } from '../constants';
+// Added HEAVENLY_STEMS and EARTHLY_BRANCHES to imports for the pillar filter selection
+import { ELEMENT_COLORS, STEM_ELEMENTS, BRANCH_ELEMENTS, HEAVENLY_STEMS, EARTHLY_BRANCHES } from '../constants';
+
+/**
+ * 生产环境下，由于使用了 Nginx 反向代理，API_BASE_URL 应保持为空
+ * 请求将通过相对路径 /api 发起，由 Nginx 进行拦截并转发。
+ */
+const API_BASE_URL = ''; 
 
 interface CaseLibraryProps {
   onSelectCase: (caseData: any) => void;
@@ -35,8 +42,6 @@ const CaseLibrary: React.FC<CaseLibraryProps> = ({ onSelectCase }) => {
   const [nextUrl, setNextUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  // 筛选状态
-  const [searchTerm, setSearchTerm] = useState('');
   const [filterGender, setFilterGender] = useState<string>('ALL');
   const [pillarFilters, setPillarFilters] = useState({
     year: '',
@@ -45,7 +50,6 @@ const CaseLibrary: React.FC<CaseLibraryProps> = ({ onSelectCase }) => {
     hour: ''
   });
 
-  // 性别映射逻辑：假设 0=女(坤), 1=男(乾)
   const mapGenderToApi = (g: string) => {
     if (g === Gender.MALE) return '1';
     if (g === Gender.FEMALE) return '0';
@@ -58,8 +62,9 @@ const CaseLibrary: React.FC<CaseLibraryProps> = ({ onSelectCase }) => {
   };
 
   /**
-   * 将 API 返回的绝对路径 (如 http://127.0.0.1:8000/api/...) 
-   * 转换为相对路径 (/api/...)，以便通过 Vite 代理转发。
+   * 规范化后端返回的分页 URL
+   * 后端通常会返回绝对路径 (如 http://127.0.0.1:8000/api/...)
+   * 在浏览器端我们需要将其转换为相对路径 /api/... 才能通过 Nginx 转发
    */
   const normalizeUrl = (url: string) => {
     if (!url) return url;
@@ -67,11 +72,11 @@ const CaseLibrary: React.FC<CaseLibraryProps> = ({ onSelectCase }) => {
       const urlObj = new URL(url);
       return urlObj.pathname + urlObj.search;
     } catch (e) {
-      return url;
+      // 如果已经是相对路径
+      return url.startsWith('/api') ? url : `/api${url}`;
     }
   };
 
-  // 核心请求逻辑
   const fetchCases = useCallback(async (isLoadMore = false) => {
     if (isLoadMore) setIsAppending(true);
     else setIsLoading(true);
@@ -80,7 +85,6 @@ const CaseLibrary: React.FC<CaseLibraryProps> = ({ onSelectCase }) => {
 
     try {
       const params = new URLSearchParams();
-      if (searchTerm) params.append('search', searchTerm);
       if (filterGender !== 'ALL') params.append('gender', mapGenderToApi(filterGender));
       if (pillarFilters.year) params.append('year_ganzhi', pillarFilters.year);
       if (pillarFilters.month) params.append('month_ganzhi', pillarFilters.month);
@@ -88,12 +92,19 @@ const CaseLibrary: React.FC<CaseLibraryProps> = ({ onSelectCase }) => {
       if (pillarFilters.hour) params.append('hour_ganzhi', pillarFilters.hour);
       params.append('page_size', '12');
 
-      const baseUrl = '/api/destiny-cases/';
-      // 如果是加载更多，则使用 normalize 后的 nextUrl
-      const url = isLoadMore && nextUrl ? normalizeUrl(nextUrl) : `${baseUrl}?${params.toString()}`;
+      // 构造请求路径
+      let targetUrl = '';
+      if (isLoadMore && nextUrl) {
+        targetUrl = normalizeUrl(nextUrl);
+      } else {
+        targetUrl = `/api/destiny-cases/?${params.toString()}`;
+      }
 
-      const response = await fetch(url);
-      if (!response.ok) throw new Error(`API Error: ${response.status}`);
+      const response = await fetch(targetUrl);
+      
+      if (!response.ok) {
+        throw new Error(`API Error: ${response.status}`);
+      }
       
       const data = await response.json();
 
@@ -118,36 +129,32 @@ const CaseLibrary: React.FC<CaseLibraryProps> = ({ onSelectCase }) => {
       setTotalCount(data.count || 0);
       setNextUrl(data.next);
     } catch (err) {
-      console.error('Fetch error:', err);
+      console.warn('[CaseLibrary] Connection failed, fallback to mock data.', err);
       if (!isLoadMore) {
-        setError('无法连接到命例数据库，已载入离线演示数据。');
         setCases(MOCK_CASES);
       }
     } finally {
       setIsLoading(false);
       setIsAppending(false);
     }
-  }, [searchTerm, filterGender, pillarFilters, nextUrl]);
+  }, [filterGender, pillarFilters, nextUrl]);
 
-  // 初始加载及筛选变化时加载
   useEffect(() => {
     const timer = setTimeout(() => {
       fetchCases(false);
-    }, 400); // 防抖
+    }, 400);
     return () => clearTimeout(timer);
-  }, [searchTerm, filterGender, pillarFilters]);
+  }, [filterGender, pillarFilters]);
 
   const resetFilters = () => {
     setPillarFilters({ year: '', month: '', day: '', hour: '' });
     setFilterGender('ALL');
-    setSearchTerm('');
   };
 
-  const isFiltered = filterGender !== 'ALL' || pillarFilters.year || pillarFilters.month || pillarFilters.day || pillarFilters.hour || searchTerm;
+  const isFiltered = filterGender !== 'ALL' || pillarFilters.year || pillarFilters.month || pillarFilters.day || pillarFilters.hour;
 
   return (
     <div className="flex flex-col gap-5 animate-fade-in">
-      {/* 顶部搜索与筛选 */}
       <div className="bg-white p-6 rounded-[2.5rem] border border-stone-200 shadow-sm flex flex-col gap-6">
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
           <div className="flex items-center gap-3">
@@ -156,9 +163,7 @@ const CaseLibrary: React.FC<CaseLibraryProps> = ({ onSelectCase }) => {
             </div>
             <div className="flex flex-col">
               <span className="text-sm font-bold text-stone-800 tracking-tight">命例数据库</span>
-              <span className="text-[11px] text-stone-400 font-serif">
-                {isLoading ? '正在检索...' : `匹配到 ${totalCount} 条命例`}
-              </span>
+              <span className="text-[11px] text-stone-300 font-serif">古籍真踪 · 实例拾遗</span>
             </div>
           </div>
           
@@ -175,140 +180,139 @@ const CaseLibrary: React.FC<CaseLibraryProps> = ({ onSelectCase }) => {
           </div>
         </div>
 
-        {/* 关键字搜索 */}
-        <div className="relative group">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-stone-300 group-focus-within:text-amber-600 transition-colors" size={18} />
-          <input 
-            type="text"
-            placeholder="搜标签、来源、反馈内容..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full bg-stone-50 border-2 border-stone-100 rounded-2xl py-3.5 pl-12 pr-4 text-sm font-medium focus:bg-white focus:border-[#2b2320] outline-none transition-all shadow-inner"
-          />
-        </div>
-
-        {/* 四柱快捷过滤 */}
         <div className="grid grid-cols-4 gap-3 md:gap-4">
-          {[
-            { id: 'year', label: '年柱' },
-            { id: 'month', label: '月柱' },
-            { id: 'day', label: '日柱' },
-            { id: 'hour', label: '时柱' }
-          ].map((item) => (
-            <div key={item.id} className="flex flex-col gap-2">
-               <label className="text-[10px] text-stone-400 font-bold text-center uppercase tracking-widest">
-                 {item.label}
-               </label>
-               <input 
-                 type="text"
-                 maxLength={2}
-                 placeholder="干支"
-                 value={(pillarFilters as any)[item.id]}
-                 onChange={(e) => setPillarFilters({...pillarFilters, [item.id]: e.target.value})}
-                 className="w-full bg-stone-50 border border-stone-100 rounded-xl py-2.5 text-center text-sm font-bold text-stone-800 focus:bg-white focus:border-amber-500 outline-none transition-all placeholder:text-stone-200"
-               />
-            </div>
+          {['year', 'month', 'day', 'hour'].map((p) => (
+             <div key={p} className="flex flex-col gap-1.5">
+               <span className="text-[10px] font-bold text-stone-400 uppercase tracking-widest ml-1">
+                 {p === 'year' ? '年柱' : p === 'month' ? '月柱' : p === 'day' ? '日柱' : '时柱'}
+               </span>
+               <div className="relative">
+                 <select 
+                   value={(pillarFilters as any)[p]}
+                   onChange={(e) => setPillarFilters(prev => ({ ...prev, [p]: e.target.value }))}
+                   className="w-full bg-stone-100 border-none rounded-xl py-2 pl-3 pr-8 text-xs font-bold text-stone-700 appearance-none focus:ring-1 focus:ring-stone-200 outline-none cursor-pointer"
+                 >
+                   <option value="">全部</option>
+                   {HEAVENLY_STEMS.flatMap(s => EARTHLY_BRANCHES.map(b => s + b)).map(gz => (
+                     <option key={gz} value={gz}>{gz}</option>
+                   ))}
+                 </select>
+                 <ChevronDown size={12} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-stone-400 pointer-events-none" />
+               </div>
+             </div>
           ))}
         </div>
 
-        {isFiltered && (
-          <button 
-            onClick={resetFilters}
-            className="flex items-center justify-center gap-2 py-3 bg-rose-50/50 text-rose-800 text-[11px] font-bold rounded-2xl hover:bg-rose-100 transition-all border border-rose-100/50 active:scale-[0.98]"
-          >
-            <Trash2 size={14} /> 重置所有条件
-          </button>
-        )}
+        {/* 匹配统计信息，放置在筛选条件下方 */}
+        <div className="flex items-center justify-between px-1">
+           <div className="flex items-center gap-2">
+              <div className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></div>
+              <span className="text-[11px] font-bold text-stone-400">
+                {isLoading ? '正在检索命例...' : `匹配到 ${totalCount} 条命例`}
+              </span>
+           </div>
+           
+           {isFiltered && (
+              <button 
+                onClick={resetFilters}
+                className="flex items-center gap-1 text-stone-300 hover:text-rose-600 text-[11px] font-bold transition-colors"
+              >
+                <Trash2 size={12} />
+                <span>清空筛选</span>
+              </button>
+           )}
+        </div>
       </div>
 
-      {/* 命例列表展示 */}
-      {isLoading && !isAppending ? (
-        <div className="py-32 flex flex-col items-center gap-4 text-stone-300">
-           <Loader2 size={40} className="animate-spin text-stone-200" />
-           <p className="text-sm font-serif italic">正在从命海深处调取数据...</p>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-          {cases.map((c) => (
-            <div 
-              key={c.id} 
-              className="bg-white rounded-[2.5rem] border border-stone-200 p-6 shadow-sm hover:shadow-xl transition-all group flex flex-col relative overflow-hidden"
-            >
-              <div className="absolute top-0 right-0 w-32 h-32 bg-stone-50/30 -z-10 rounded-bl-[5rem]"></div>
-              
-              <div className="flex justify-between items-start mb-6">
-                <div className="flex flex-col">
-                  <div className="flex items-center gap-2 mb-3">
-                    <span className={`px-3 py-1 rounded-full text-[11px] font-bold shadow-sm ${c.gender === Gender.MALE ? 'bg-sky-50 text-sky-800 border border-sky-100' : 'bg-rose-50 text-rose-800 border border-rose-100'}`}>
-                      {c.gender.split(' ')[0]}
-                    </span>
-                    <span className="text-[11px] text-stone-400 font-serif flex items-center gap-1.5 opacity-80 truncate max-w-[120px]">
-                      <Book size={14} /> {c.source}
-                    </span>
-                  </div>
-                  <div className="flex gap-3">
-                     <MiniPillar gan={c.yearGZ[0]} zhi={c.yearGZ[1]} />
-                     <MiniPillar gan={c.monthGZ[0]} zhi={c.monthGZ[1]} />
-                     <MiniPillar gan={c.dayGZ[0]} zhi={c.dayGZ[1]} />
-                     <MiniPillar gan={c.hourGZ[0]} zhi={c.hourGZ[1]} />
-                  </div>
-                </div>
-                <button 
-                  onClick={() => onSelectCase(c)}
-                  className="p-4.5 bg-[#2b2320] text-white rounded-[1.8rem] hover:bg-stone-800 transition-all shadow-xl active:scale-90 flex items-center justify-center group/btn relative overflow-hidden"
-                >
-                  <Zap size={24} className="group-hover/btn:scale-110 transition-transform relative z-10" fill="currentColor" />
-                </button>
-              </div>
-
-              <div className="bg-stone-50/60 rounded-3xl p-5 mb-5 flex-1 border border-stone-100/50 group-hover:bg-white transition-colors">
-                 <p className="text-sm text-stone-600 leading-relaxed italic line-clamp-4 font-serif">
-                   “ {c.feedback} ”
-                 </p>
-              </div>
-
-              <div className="flex flex-wrap gap-2 mt-auto">
-                 <Tags size={14} className="text-stone-300 mt-1" />
-                 {c.tags.length > 0 ? c.tags.map(tag => (
-                   <span key={tag} className="text-[10px] bg-stone-100 text-stone-500 px-3 py-1.5 rounded-xl font-bold tracking-tight">
-                     #{tag}
-                   </span>
-                 )) : <span className="text-[10px] text-stone-300 py-1.5 italic">未分类</span>}
-              </div>
-            </div>
-          ))}
+      {error && (
+        <div className="bg-rose-50 p-4 rounded-2xl border border-rose-100 flex items-center gap-3 text-rose-800">
+          <AlertCircle size={18} />
+          <p className="text-xs font-bold">{error}</p>
         </div>
       )}
 
-      {/* 加载更多 */}
-      {!isLoading && nextUrl && (
-        <button 
-          onClick={() => fetchCases(true)}
-          disabled={isAppending}
-          className="my-8 py-4 flex items-center justify-center gap-3 bg-white border border-stone-200 rounded-[2rem] text-stone-500 font-bold text-sm shadow-sm hover:bg-stone-50 active:scale-[0.98] transition-all disabled:opacity-50"
-        >
-          {isAppending ? (
-            <Loader2 size={18} className="animate-spin" />
-          ) : (
-            <>
-              <ChevronDown size={18} />
-              <span>载入更多命例 ({cases.length} / {totalCount})</span>
-            </>
-          )}
-        </button>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {cases.map((c) => (
+          <div 
+            key={c.id}
+            onClick={() => onSelectCase(c)}
+            className="bg-white p-5 rounded-3xl border border-stone-200 hover:border-amber-300 hover:shadow-md transition-all cursor-pointer group flex flex-col gap-4"
+          >
+             <div className="flex items-start justify-between">
+                <div className="flex items-center gap-3">
+                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-sm font-bold ${c.gender === Gender.MALE ? 'bg-sky-50 text-sky-700' : 'bg-rose-50 text-rose-700'}`}>
+                    {c.gender === Gender.MALE ? '乾' : '坤'}
+                  </div>
+                  <div className="flex flex-col">
+                    <span className="text-xs font-bold text-stone-800">{c.source}</span>
+                    <div className="flex gap-1 mt-0.5">
+                      {c.tags.slice(0, 3).map((t, idx) => (
+                        <span key={idx} className="text-[9px] bg-stone-100 text-stone-500 px-1.5 py-0.5 rounded-md">{t}</span>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+                {/* 增加说明文字和图标组合，图标在前，文字在后，改为按钮样式并默认显示 */}
+                <div className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-50 border border-amber-200/50 rounded-xl text-amber-600 group-hover:bg-amber-100 group-hover:text-amber-700 transition-all duration-300 shadow-sm group-hover:shadow-md active:scale-95">
+                  <Zap size={14} className="fill-amber-500/10" />
+                  <span className="text-[10px] font-bold tracking-tight">命例排盘</span>
+                </div>
+             </div>
+
+             <div className="flex justify-between bg-stone-50/50 p-3 rounded-2xl border border-stone-100">
+                <MiniPillar gan={c.yearGZ[0]} zhi={c.yearGZ[1]} />
+                <MiniPillar gan={c.monthGZ[0]} zhi={c.monthGZ[1]} />
+                <MiniPillar gan={c.dayGZ[0]} zhi={c.dayGZ[1]} />
+                <MiniPillar gan={c.hourGZ[0]} zhi={c.hourGZ[1]} />
+             </div>
+
+             {/* 修改点：去除 italic 类，去除引号包裹，保留 line-clamp-2 以确保超出显示省略号 */}
+             <p className="text-xs text-stone-500 leading-relaxed line-clamp-2">
+               {c.feedback}
+             </p>
+          </div>
+        ))}
+      </div>
+
+      {isLoading && !isAppending && (
+        <div className="flex flex-col items-center justify-center py-20 gap-4">
+          <Loader2 className="animate-spin text-stone-300" size={32} />
+          <span className="text-sm font-bold text-stone-300">正在搜寻命理真踪...</span>
+        </div>
       )}
 
       {!isLoading && cases.length === 0 && (
-        <div className="py-40 text-center text-stone-300 flex flex-col items-center gap-6">
-           <div className="w-20 h-20 rounded-full border border-stone-200 flex items-center justify-center">
-             <Filter size={32} className="opacity-20" />
+        <div className="bg-white rounded-[2.5rem] p-20 border border-stone-200 border-dashed flex flex-col items-center justify-center text-center">
+           <div className="w-16 h-16 bg-stone-50 rounded-full flex items-center justify-center text-stone-200 mb-4">
+              <Search size={32} />
            </div>
-           <p className="font-serif italic text-stone-400">大千世界，未见此局</p>
-           <button onClick={resetFilters} className="text-xs text-amber-700 font-bold underline underline-offset-4">尝试清除筛选条件</button>
+           <h3 className="text-stone-400 font-bold">未找到相关命例</h3>
+           <p className="text-stone-300 text-xs mt-1">尝试调整筛选条件或搜索关键词</p>
         </div>
+      )}
+
+      {nextUrl && (
+        <button 
+          onClick={() => fetchCases(true)}
+          disabled={isAppending}
+          className="w-full py-4 bg-white border border-stone-200 rounded-2xl text-stone-500 text-sm font-bold hover:bg-stone-50 transition-all flex items-center justify-center gap-2 active:scale-[0.98]"
+        >
+          {isAppending ? (
+            <>
+              <Loader2 size={16} className="animate-spin" />
+              <span>加载中...</span>
+            </>
+          ) : (
+            <>
+              <span>加载更多命例</span>
+              <ChevronDown size={16} />
+            </>
+          )}
+        </button>
       )}
     </div>
   );
 };
 
+// Fixed: Add default export to fix the error "Module has no default export" in App.tsx
 export default CaseLibrary;

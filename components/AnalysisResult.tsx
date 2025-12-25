@@ -26,8 +26,9 @@ const AnalysisResult: React.FC<AnalysisResultProps> = ({ caseFeedback, caseSourc
             </div>
          </div>
          <div className="relative z-10">
-            <p className="text-stone-700 leading-relaxed italic text-lg font-serif">
-              “ {caseFeedback} ”
+            {/* 修改点：去除 italic 类，去除引号包裹 */}
+            <p className="text-stone-700 leading-relaxed text-lg font-serif">
+              {caseFeedback}
             </p>
          </div>
       </div>

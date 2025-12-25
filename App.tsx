@@ -12,7 +12,8 @@ import { ArrowLeft, LayoutGrid, Library, User } from 'lucide-react';
 type TabType = 'INPUT' | 'LIBRARY' | 'ABOUT';
 
 const App: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<TabType>('INPUT');
+  // 修改默认 Tab 为 'LIBRARY'
+  const [activeTab, setActiveTab] = useState<TabType>('LIBRARY');
   const [chartData, setChartData] = useState<BaZiChart | null>(null);
   const [showResult, setShowResult] = useState(false);
 
@@ -97,7 +98,7 @@ const App: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-[#fbf9f4] text-[#2b2320] selection:bg-rose-900/10 selection:text-rose-900 overflow-x-hidden">
-      {/* 极简页头：压缩 Logo 区域 */}
+      {/* 极简页头 */}
       {!showResult && (
         <header className={`px-4 relative transition-all ${activeTab === 'INPUT' ? 'pt-4 pb-1' : 'pt-5 pb-3'}`}>
           <div className="absolute top-[-100px] left-1/2 -translate-x-1/2 w-[600px] h-[600px] bg-stone-200/20 rounded-full blur-[100px] -z-10 pointer-events-none"></div>

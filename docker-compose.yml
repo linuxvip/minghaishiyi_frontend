@@ -3,11 +3,11 @@ services:
   bazi-web:
     build:
       context: .
-      args:
-        - API_KEY=${GEMINI_API_KEY}
     container_name: bazi-app-container
     ports:
       - "80:80"
     restart: always
     environment:
       - NODE_ENV=production
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
