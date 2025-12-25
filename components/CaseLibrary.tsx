@@ -12,6 +12,11 @@ const API_BASE_URL = '';
 
 interface CaseLibraryProps {
   onSelectCase: (caseData: any) => void;
+  filters: {
+    gender: string;
+    pillars: { year: string; month: string; day: string; hour: string };
+  };
+  onFiltersChange: (newFilters: any) => void;
 }
 
 const MiniPillar: React.FC<{ gan: string; zhi: string }> = ({ gan, zhi }) => {
@@ -32,7 +37,7 @@ const MiniPillar: React.FC<{ gan: string; zhi: string }> = ({ gan, zhi }) => {
   );
 };
 
-const CaseLibrary: React.FC<CaseLibraryProps> = ({ onSelectCase }) => {
+const CaseLibrary: React.FC<CaseLibraryProps> = ({ onSelectCase, filters, onFiltersChange }) => {
   const [cases, setCases] = useState<CaseRecord[]>([]);
   const [totalCount, setTotalCount] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
@@ -40,13 +45,8 @@ const CaseLibrary: React.FC<CaseLibraryProps> = ({ onSelectCase }) => {
   const [nextUrl, setNextUrl] = useState<string | null>(null);
   const [error, setError] = useState<boolean>(false);
 
-  const [filterGender, setFilterGender] = useState<string>('ALL');
-  const [pillarFilters, setPillarFilters] = useState({
-    year: '',
-    month: '',
-    day: '',
-    hour: ''
-  });
+  // 使用解构方便代码引用
+  const { gender: filterGender, pillars: pillarFilters } = filters;
 
   const mapGenderToApi = (g: string) => {
     if (g === Gender.MALE) return '1';
@@ -139,33 +139,36 @@ const CaseLibrary: React.FC<CaseLibraryProps> = ({ onSelectCase }) => {
   }, [filterGender, pillarFilters]);
 
   const resetFilters = () => {
-    setPillarFilters({ year: '', month: '', day: '', hour: '' });
-    setFilterGender('ALL');
+    onFiltersChange({
+      gender: 'ALL',
+      pillars: { year: '', month: '', day: '', hour: '' }
+    });
+  };
+
+  const handleGenderChange = (g: string) => {
+    onFiltersChange({ ...filters, gender: g });
+  };
+
+  const handlePillarChange = (pKey: string, val: string) => {
+    onFiltersChange({
+      ...filters,
+      pillars: { ...pillarFilters, [pKey]: val }
+    });
   };
 
   const isFiltered = filterGender !== 'ALL' || pillarFilters.year || pillarFilters.month || pillarFilters.day || pillarFilters.hour;
 
   return (
-    <div className="flex flex-col gap-5 animate-fade-in">
+    <div className="flex flex-col gap-3 animate-fade-in">
       {/* 筛选面板 */}
       <div className="bg-white p-6 rounded-[2.5rem] border border-stone-200 shadow-sm flex flex-col gap-6">
-        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <div className="bg-[#2b2320] p-2.5 rounded-2xl text-white shadow-lg">
-              <Database size={20} />
-            </div>
-            <div className="flex flex-col">
-              <span className="text-sm font-bold text-stone-800 tracking-tight">命例数据库</span>
-              <span className="text-[11px] text-stone-300 font-serif">古籍真踪 · 实例拾遗</span>
-            </div>
-          </div>
-          
-          <div className="flex bg-stone-100 p-1.5 rounded-2xl border border-stone-200/50 w-full md:w-auto">
+        <div className="flex flex-col md:flex-row items-center justify-center gap-4">
+          <div className="flex bg-stone-100 p-1.5 rounded-2xl border border-stone-200/50 w-full md:w-auto max-w-sm">
              {['ALL', Gender.MALE, Gender.FEMALE].map(g => (
                <button 
                  key={g} 
-                 onClick={() => setFilterGender(g)}
-                 className={`flex-1 md:flex-initial px-5 py-2 rounded-xl text-[11px] font-bold transition-all ${filterGender === g ? 'bg-white text-[#2b2320] shadow-md ring-1 ring-black/5' : 'text-stone-400 hover:text-stone-500'}`}
+                 onClick={() => handleGenderChange(g)}
+                 className={`flex-1 md:flex-initial px-8 py-2 rounded-xl text-[11px] font-bold transition-all ${filterGender === g ? 'bg-white text-[#2b2320] shadow-md ring-1 ring-black/5' : 'text-stone-400 hover:text-stone-500'}`}
                >
                  {g === 'ALL' ? '全部' : g.split(' ')[0]}
                </button>
@@ -173,6 +176,7 @@ const CaseLibrary: React.FC<CaseLibraryProps> = ({ onSelectCase }) => {
           </div>
         </div>
 
+        {/* 筛选输入框区域 */}
         <div className="grid grid-cols-4 gap-3 md:gap-4">
           {['year', 'month', 'day', 'hour'].map((p) => (
              <div key={p} className="flex flex-col gap-1.5">
@@ -180,87 +184,86 @@ const CaseLibrary: React.FC<CaseLibraryProps> = ({ onSelectCase }) => {
                  {p === 'year' ? '年柱' : p === 'month' ? '月柱' : p === 'day' ? '日柱' : '时柱'}
                </span>
                <div className="relative">
-                 <select 
+                 <input 
+                   type="text"
                    value={(pillarFilters as any)[p]}
-                   onChange={(e) => setPillarFilters(prev => ({ ...prev, [p]: e.target.value }))}
-                   className="w-full bg-stone-100 border-none rounded-xl py-2 pl-3 pr-8 text-xs font-bold text-stone-700 appearance-none focus:ring-1 focus:ring-stone-200 outline-none cursor-pointer"
-                 >
-                   <option value="">全部</option>
-                   {HEAVENLY_STEMS.flatMap(s => EARTHLY_BRANCHES.map(b => s + b)).map(gz => (
-                     <option key={gz} value={gz}>{gz}</option>
-                   ))}
-                 </select>
-                 <ChevronDown size={12} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-stone-400 pointer-events-none" />
+                   onChange={(e) => handlePillarChange(p, e.target.value)}
+                   placeholder="全部"
+                   className="w-full bg-stone-100 border-none rounded-xl py-2 px-3 text-xs font-bold text-stone-700 focus:ring-1 focus:ring-stone-200 outline-none placeholder:text-stone-300"
+                 />
                </div>
              </div>
           ))}
         </div>
 
-        <div className="flex items-center justify-between px-1">
+        {/* 底部统计与清空操作栏 */}
+        <div className="flex items-center justify-between px-1 border-t border-stone-50 pt-4">
            <div className="flex items-center gap-2">
-              <div className={`w-1.5 h-1.5 rounded-full ${isLoading ? 'bg-amber-400 animate-pulse' : 'bg-amber-500'}`}></div>
+              <Database size={13} className={`transition-colors ${isLoading ? 'text-amber-400 animate-pulse' : 'text-amber-500'}`} />
               <span className="text-[11px] font-bold text-stone-400">
                 {isLoading ? '正在检索命例...' : `匹配到 ${totalCount} 条命例`}
               </span>
            </div>
-           
+
            {isFiltered && (
-              <button 
-                onClick={resetFilters}
-                className="flex items-center gap-1 text-stone-300 hover:text-rose-600 text-[11px] font-bold transition-colors"
-              >
-                <Trash2 size={12} />
-                <span>清空筛选</span>
-              </button>
+             <button 
+               onClick={resetFilters}
+               className="flex items-center gap-1.5 text-stone-300 hover:text-rose-600 transition-all text-[11px] font-bold"
+             >
+               <Trash2 size={12} />
+               <span>清空筛选条件</span>
+             </button>
            )}
         </div>
       </div>
 
       {/* 命例列表区域 */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {cases.map((c) => (
-          <div 
-            key={c.id}
-            onClick={() => onSelectCase(c)}
-            className="bg-white p-5 rounded-3xl border border-stone-200 hover:border-amber-300 hover:shadow-md transition-all cursor-pointer group flex flex-col gap-4"
-          >
-             <div className="flex items-start justify-between">
-                <div className="flex items-center gap-3">
-                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-sm font-bold ${c.gender === Gender.MALE ? 'bg-sky-50 text-sky-700' : 'bg-rose-50 text-rose-700'}`}>
-                    {c.gender === Gender.MALE ? '乾' : '坤'}
-                  </div>
-                  <div className="flex flex-col">
-                    <span className="text-xs font-bold text-stone-800">{c.source}</span>
-                    <div className="flex gap-1 mt-0.5">
-                      {c.tags.slice(0, 3).map((t, idx) => (
-                        <span key={idx} className="text-[9px] bg-stone-100 text-stone-500 px-1.5 py-0.5 rounded-md">{t}</span>
-                      ))}
+      {cases.length > 0 && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {cases.map((c) => (
+            <div 
+              key={c.id}
+              onClick={() => onSelectCase(c)}
+              className="bg-white p-5 rounded-3xl border border-stone-200 hover:border-amber-300 hover:shadow-md transition-all cursor-pointer group flex flex-col gap-4"
+            >
+               <div className="flex items-start justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-sm font-bold ${c.gender === Gender.MALE ? 'bg-sky-50 text-sky-700' : 'bg-rose-50 text-rose-700'}`}>
+                      {c.gender === Gender.MALE ? '乾' : '坤'}
+                    </div>
+                    <div className="flex flex-col">
+                      <span className="text-xs font-bold text-stone-800">{c.source}</span>
+                      <div className="flex gap-1 mt-0.5">
+                        {c.tags.slice(0, 3).map((t, idx) => (
+                          <span key={idx} className="text-[9px] bg-stone-100 text-stone-500 px-1.5 py-0.5 rounded-md">{t}</span>
+                        ))}
+                      </div>
                     </div>
                   </div>
-                </div>
-                <div className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-50 border border-amber-200/50 rounded-xl text-amber-600 group-hover:bg-amber-100 group-hover:text-amber-700 transition-all duration-300 shadow-sm group-hover:shadow-md active:scale-95">
-                  <Zap size={14} className="fill-amber-500/10" />
-                  <span className="text-[10px] font-bold tracking-tight">命例排盘</span>
-                </div>
-             </div>
+                  <div className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-50 border border-amber-200/50 rounded-xl text-amber-600 group-hover:bg-amber-100 group-hover:text-amber-700 transition-all duration-300 shadow-sm group-hover:shadow-md active:scale-95">
+                    <Zap size={14} className="fill-amber-500/10" />
+                    <span className="text-[10px] font-bold tracking-tight">命例排盘</span>
+                  </div>
+               </div>
 
-             <div className="flex justify-between bg-stone-50/50 p-3 rounded-2xl border border-stone-100">
-                <MiniPillar gan={c.yearGZ[0]} zhi={c.yearGZ[1]} />
-                <MiniPillar gan={c.monthGZ[0]} zhi={c.monthGZ[1]} />
-                <MiniPillar gan={c.dayGZ[0]} zhi={c.dayGZ[1]} />
-                <MiniPillar gan={c.hourGZ[0]} zhi={c.hourGZ[1]} />
-             </div>
+               <div className="flex justify-between bg-stone-50/50 p-3 rounded-2xl border border-stone-100">
+                  <MiniPillar gan={c.yearGZ[0]} zhi={c.yearGZ[1]} />
+                  <MiniPillar gan={c.monthGZ[0]} zhi={c.monthGZ[1]} />
+                  <MiniPillar gan={c.dayGZ[0]} zhi={c.dayGZ[1]} />
+                  <MiniPillar gan={c.hourGZ[0]} zhi={c.hourGZ[1]} />
+               </div>
 
-             <p className="text-xs text-stone-500 leading-relaxed line-clamp-2">
-               {c.feedback}
-             </p>
-          </div>
-        ))}
-      </div>
+               <p className="text-xs text-stone-500 leading-relaxed line-clamp-2">
+                 {c.feedback}
+               </p>
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* 加载状态 */}
       {isLoading && !isAppending && (
-        <div className="flex flex-col items-center justify-center py-20 gap-4">
+        <div className="flex flex-col items-center justify-center py-16 gap-4">
           <Loader2 className="animate-spin text-stone-300" size={32} />
           <span className="text-sm font-bold text-stone-300">正在搜寻命理真踪...</span>
         </div>
@@ -268,7 +271,7 @@ const CaseLibrary: React.FC<CaseLibraryProps> = ({ onSelectCase }) => {
 
       {/* 无数据或错误状态：系统维护提示 */}
       {!isLoading && (error || cases.length === 0) && (
-        <div className="bg-white rounded-[2.5rem] p-16 md:p-24 border border-stone-200 border-dashed flex flex-col items-center justify-center text-center animate-fade-in shadow-inner">
+        <div className="bg-white rounded-[2.5rem] py-12 px-8 md:py-20 border border-stone-200 border-dashed flex flex-col items-center justify-center text-center animate-fade-in shadow-inner">
            <div className="w-16 h-16 bg-stone-50 rounded-full flex items-center justify-center text-stone-200 mb-5">
               {error ? <AlertCircle size={32} /> : <Sparkles size={32} />}
            </div>

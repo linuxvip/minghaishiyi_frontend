@@ -12,10 +12,15 @@ import { ArrowLeft, LayoutGrid, Library, User } from 'lucide-react';
 type TabType = 'INPUT' | 'LIBRARY' | 'ABOUT';
 
 const App: React.FC = () => {
-  // 修改默认 Tab 为 'LIBRARY'
   const [activeTab, setActiveTab] = useState<TabType>('LIBRARY');
   const [chartData, setChartData] = useState<BaZiChart | null>(null);
   const [showResult, setShowResult] = useState(false);
+
+  // 提升命例库筛选状态，防止在切回时重置
+  const [libraryFilters, setLibraryFilters] = useState({
+    gender: 'ALL',
+    pillars: { year: '', month: '', day: '', hour: '' }
+  });
 
   const handleCalculate = useCallback((data: any) => {
      try {
@@ -75,7 +80,7 @@ const App: React.FC = () => {
                className="px-3 py-1.5 text-stone-600 hover:text-[#2b2320] hover:bg-white rounded-xl transition-all flex items-center gap-1.5 border border-stone-200/50 shadow-sm bg-white"
              >
                <ArrowLeft size={14} />
-               <span className="text-xs font-bold">重新输入</span>
+               <span className="text-xs font-bold">返回列表</span>
              </button>
              <div className="text-stone-300 font-calligraphy text-lg opacity-40">命海拾遗</div>
            </div>
@@ -90,15 +95,23 @@ const App: React.FC = () => {
 
     switch (activeTab) {
       case 'INPUT': return <div className="pb-24"><InputForm onCalculate={handleCalculate} /></div>;
-      case 'LIBRARY': return <div className="pb-24"><CaseLibrary onSelectCase={handleSelectCase} /></div>;
+      case 'LIBRARY': 
+        return (
+          <div className="pb-24">
+            <CaseLibrary 
+              onSelectCase={handleSelectCase} 
+              filters={libraryFilters}
+              onFiltersChange={setLibraryFilters}
+            />
+          </div>
+        );
       case 'ABOUT': return <div className="pb-24"><AuthorInfo /></div>;
       default: return null;
     }
-  }, [showResult, chartData, activeTab, handleCalculate, handleSelectCase, handleBack]);
+  }, [showResult, chartData, activeTab, handleCalculate, handleSelectCase, handleBack, libraryFilters]);
 
   return (
     <div className="min-h-screen bg-[#fbf9f4] text-[#2b2320] selection:bg-rose-900/10 selection:text-rose-900 overflow-x-hidden">
-      {/* 极简页头 */}
       {!showResult && (
         <header className={`px-4 relative transition-all ${activeTab === 'INPUT' ? 'pt-4 pb-1' : 'pt-5 pb-3'}`}>
           <div className="absolute top-[-100px] left-1/2 -translate-x-1/2 w-[600px] h-[600px] bg-stone-200/20 rounded-full blur-[100px] -z-10 pointer-events-none"></div>
@@ -115,12 +128,10 @@ const App: React.FC = () => {
         </header>
       )}
 
-      {/* 内容区域 */}
       <main className={`px-4 max-w-4xl mx-auto w-full relative z-10 ${showResult ? 'pt-1' : 'pt-1'}`}>
         {currentView}
       </main>
       
-      {/* 底部导航栏 */}
       <nav className="fixed bottom-0 left-0 right-0 z-[100] px-4 pb-6 pt-2 pointer-events-none">
         <div className="max-w-md mx-auto bg-white/90 backdrop-blur-xl border border-stone-200/50 rounded-[2rem] shadow-2xl pointer-events-auto flex items-center justify-around p-2">
           <NavButton 
