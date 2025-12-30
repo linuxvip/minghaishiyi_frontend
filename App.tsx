@@ -5,18 +5,18 @@ import BaZiChartDisplay from './components/BaZiChartDisplay';
 import AnalysisResult from './components/AnalysisResult';
 import CaseLibrary from './components/CaseLibrary';
 import AuthorInfo from './components/AuthorInfo';
+import HuangLi from './components/HuangLi';
 import { calculateBaZi } from './utils/baziHelper';
 import { BaZiChart, CalendarType, CaseRecord } from './types';
-import { ArrowLeft, LayoutGrid, Library, User } from 'lucide-react';
+import { ArrowLeft, LayoutGrid, Library, User, CalendarDays } from 'lucide-react';
 
-type TabType = 'INPUT' | 'LIBRARY' | 'ABOUT';
+type TabType = 'INPUT' | 'LIBRARY' | 'HUANGLI' | 'ABOUT';
 
 const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<TabType>('LIBRARY');
   const [chartData, setChartData] = useState<BaZiChart | null>(null);
   const [showResult, setShowResult] = useState(false);
 
-  // 提升命例库筛选状态，防止在切回时重置
   const [libraryFilters, setLibraryFilters] = useState({
     gender: 'ALL',
     pillars: { year: '', month: '', day: '', hour: '' }
@@ -105,6 +105,7 @@ const App: React.FC = () => {
             />
           </div>
         );
+      case 'HUANGLI': return <div className="pb-24"><HuangLi /></div>;
       case 'ABOUT': return <div className="pb-24"><AuthorInfo /></div>;
       default: return null;
     }
@@ -116,8 +117,8 @@ const App: React.FC = () => {
         <header className={`px-4 relative transition-all ${activeTab === 'INPUT' ? 'pt-4 pb-1' : 'pt-5 pb-3'}`}>
           <div className="absolute top-[-100px] left-1/2 -translate-x-1/2 w-[600px] h-[600px] bg-stone-200/20 rounded-full blur-[100px] -z-10 pointer-events-none"></div>
           <div className="max-w-4xl mx-auto text-center">
-            <h1 className={`${activeTab === 'INPUT' ? 'text-2xl' : 'text-2xl'} md:text-3xl font-calligraphy tracking-wider animate-fade-in`}>
-              {activeTab === 'INPUT' ? '命海拾遗' : activeTab === 'LIBRARY' ? '命海拾遗命例库' : '作者信息'}
+            <h1 className="text-2xl md:text-3xl font-calligraphy tracking-wider animate-fade-in">
+              {activeTab === 'INPUT' ? '命海拾遗' : activeTab === 'LIBRARY' ? '命海拾遗命例库' : activeTab === 'HUANGLI' ? '万年黄历' : '作者信息'}
             </h1>
             {activeTab === 'INPUT' && (
               <p className="text-stone-400 text-[10px] italic font-serif opacity-50">
@@ -145,6 +146,12 @@ const App: React.FC = () => {
             onClick={() => { setActiveTab('LIBRARY'); setShowResult(false); }}
             icon={<Library size={22} />}
             label="命例库"
+          />
+          <NavButton 
+            active={!showResult && activeTab === 'HUANGLI'} 
+            onClick={() => { setActiveTab('HUANGLI'); setShowResult(false); }}
+            icon={<CalendarDays size={22} />}
+            label="黄历"
           />
           <NavButton 
             active={!showResult && activeTab === 'ABOUT'} 
