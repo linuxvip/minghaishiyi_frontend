@@ -82,51 +82,46 @@ const getShiShenByName = (dayMaster: string, target: string): string => {
 
 /**
  * 根据八字干支反查阳历日期
- * 范围: 1900-2100
- * 限制: 结果不得晚于当前时刻
+ * 策略：从当前时刻开始逆序搜索至1900年，优先寻找离现在最近的匹配项。
  */
 const findSolarDateFromBaZi = (
     yearGZ: string, monthGZ: string, dayGZ: string, hourGZ: string
 ): Solar | null => {
-    const startYear = 1900;
     const now = new Date();
-    const endYear = 2100;
-
-    for (let y = startYear; y <= endYear; y++) {
-        let currentSolar = Solar.fromYmd(y, 1, 1);
-        const daysInYear = currentSolar.isLeapYear() ? 366 : 365;
+    const startSolar = Solar.fromDate(now);
+    const endSolar = Solar.fromYmd(1900, 1, 1);
+    
+    let currentSolar = startSolar;
+    
+    // 逆序查找日期
+    while (currentSolar.toYmd() >= endSolar.toYmd()) {
+        const lunar = currentSolar.getLunar();
+        const eightChar = lunar.getEightChar();
         
-        for (let d = 0; d < daysInYear; d++) {
-            const lunar = currentSolar.getLunar();
-            const eightChar = lunar.getEightChar();
+        // 检查年月日干支是否匹配
+        if (eightChar.getYear() === yearGZ && 
+            eightChar.getMonth() === monthGZ && 
+            eightChar.getDay() === dayGZ) {
             
-            // EightChar 对象使用 getYear(), getMonth(), getDay() 获取干支字符串
-            if (eightChar.getYear() === yearGZ && 
-                eightChar.getMonth() === monthGZ && 
-                eightChar.getDay() === dayGZ) {
+            // 匹配到日期后，逆序检查时辰 (22, 20...0)
+            for (let h = 22; h >= 0; h -= 2) {
+                // 如果是今天，跳过未来的时辰
+                if (currentSolar.toYmd() === startSolar.toYmd() && h > now.getHours()) {
+                  continue;
+                }
                 
-                // 遍历时辰 (0, 2, 4...22)
-                for (let h = 0; h < 24; h += 2) {
-                    const hSolar = Solar.fromYmdHms(currentSolar.getYear(), currentSolar.getMonth(), currentSolar.getDay(), h, 0, 0);
-                    const hEc = hSolar.getLunar().getEightChar();
-                    
-                    if (hEc.getTime() === hourGZ) {
-                        // 校验：不能是未来时间
-                        const resultTime = new Date(hSolar.getYear(), hSolar.getMonth()-1, hSolar.getDay(), hSolar.getHour()).getTime();
-                        if (resultTime > now.getTime()) {
-                            continue;
-                        }
-                        return hSolar;
-                    }
+                const hSolar = Solar.fromYmdHms(currentSolar.getYear(), currentSolar.getMonth(), currentSolar.getDay(), h, 0, 0);
+                const hEc = hSolar.getLunar().getEightChar();
+                
+                if (hEc.getTime() === hourGZ) {
+                    return hSolar;
                 }
             }
-            currentSolar = currentSolar.next(1);
-            // 如果日期已经超过当前年份且超过当前日期，提前终止提升性能
-            if (y === now.getFullYear() && currentSolar.getLunar().getSolar().toYmdHms() > Solar.fromDate(now).toYmdHms()) {
-                break;
-            }
         }
+        // 向前推一天
+        currentSolar = currentSolar.next(-1);
     }
+    
     return null;
 };
 
@@ -159,7 +154,7 @@ export const calculateBaZi = (
               month: createPillar(directData.monthGan, directData.monthZhi, false),
               day: createPillar(directData.dayGan, directData.dayZhi, true),
               hour: createPillar(directData.hourGan, directData.hourZhi, false),
-              gender, solarDate: '匹配失败 (1900-2100内无此日或在未来)', lunarDate: '无匹配日期',
+              gender, solarDate: '匹配失败 (1900-至今无此八字组合)', lunarDate: '无匹配日期',
               jieQi: '无信息', luckPillars: [], dayMasterElement: getElement(directData.dayGan), isDirectInput: true
           };
       }
@@ -219,6 +214,6 @@ export const calculateBaZi = (
     gender, solarDate: type === CalendarType.DIRECT ? `(推算) ${solar.toYmdHms()}` : `${solar.toYmdHms()}${correctionInfo}`,
     lunarDate: `${lunar.getYearInGanZhi()}年 ${lunar.getMonthInChinese()}月 ${lunar.getDayInChinese()} ${lunar.getTimeZhi()}时`,
     jieQi: `上节: ${lunar.getPrevJieQi().getName()} | 下气: ${lunar.getNextJieQi().getName()}`,
-    luckPillars, dayMasterElement: getElement(eightChar.getDayGan()), isDirectInput: false
+    luckPillars, dayMasterElement: getElement(eightChar.getDayGan()), isDirectInput: type === CalendarType.DIRECT
   };
 };
