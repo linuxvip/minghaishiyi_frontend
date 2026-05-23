@@ -12,7 +12,7 @@ export default defineConfig({
     proxy: {
       // 代理配置：当请求以 /api 开头时，转发到 Python 后端
       '/api': {
-        target: 'http://172.19.77.65:8000',
+        target: 'http://minghaishiyi.cn:8000',
         changeOrigin: true,
         secure: false,
       }

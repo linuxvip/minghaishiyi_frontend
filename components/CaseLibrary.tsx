@@ -44,6 +44,7 @@ const CaseLibrary: React.FC<CaseLibraryProps> = ({ onSelectCase, filters, onFilt
   const [isAppending, setIsAppending] = useState(false);
   const [nextUrl, setNextUrl] = useState<string | null>(null);
   const [error, setError] = useState<boolean>(false);
+  const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
 
   // 使用解构方便代码引用
   const { gender: filterGender, pillars: pillarFilters } = filters;
@@ -156,6 +157,16 @@ const CaseLibrary: React.FC<CaseLibraryProps> = ({ onSelectCase, filters, onFilt
     });
   };
 
+  const toggleExpand = useCallback((id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setExpandedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }, []);
+
   const isFiltered = filterGender !== 'ALL' || pillarFilters.year || pillarFilters.month || pillarFilters.day || pillarFilters.hour;
 
   return (
@@ -253,9 +264,18 @@ const CaseLibrary: React.FC<CaseLibraryProps> = ({ onSelectCase, filters, onFilt
                   <MiniPillar gan={c.hourGZ[0]} zhi={c.hourGZ[1]} />
                </div>
 
-               <p className="text-xs text-stone-500 leading-relaxed line-clamp-2">
-                 {c.feedback}
-               </p>
+               <div className="flex flex-col gap-1.5">
+                 <p className={`text-xs text-stone-500 leading-relaxed ${expandedIds.has(c.id) ? '' : 'line-clamp-2'}`}>
+                   {c.feedback}
+                 </p>
+                 <button
+                   onClick={(e) => toggleExpand(c.id, e)}
+                   className="self-start text-[10px] font-bold text-amber-600 hover:text-amber-800 transition-colors flex items-center gap-0.5"
+                 >
+                   {expandedIds.has(c.id) ? '收起' : '展开'}
+                   <ChevronDown size={10} className={`transition-transform ${expandedIds.has(c.id) ? 'rotate-180' : ''}`} />
+                 </button>
+               </div>
             </div>
           ))}
         </div>
