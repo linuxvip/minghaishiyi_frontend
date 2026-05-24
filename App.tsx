@@ -9,6 +9,7 @@ import HuangLi from './components/HuangLi';
 import { calculateBaZi } from './utils/baziHelper';
 import { BaZiChart, CalendarType, CaseRecord } from './types';
 import { ArrowLeft, LayoutGrid, Library, User, CalendarDays } from 'lucide-react';
+import { useToast } from './components/Toast';
 
 type TabType = 'INPUT' | 'LIBRARY' | 'HUANGLI' | 'ABOUT';
 
@@ -16,6 +17,7 @@ const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<TabType>('LIBRARY');
   const [chartData, setChartData] = useState<BaZiChart | null>(null);
   const [showResult, setShowResult] = useState(false);
+  const { showToast } = useToast();
 
   const [libraryFilters, setLibraryFilters] = useState({
     gender: 'ALL',
@@ -25,11 +27,11 @@ const App: React.FC = () => {
   const handleCalculate = useCallback((data: any) => {
      try {
         const chart = calculateBaZi(
-            data.year, 
-            data.month, 
-            data.day, 
-            data.hour, 
-            data.minute, 
+            data.year,
+            data.month,
+            data.day,
+            data.hour,
+            data.minute,
             data.gender,
             data.type,
             data.directData,
@@ -47,9 +49,9 @@ const App: React.FC = () => {
         window.scrollTo({ top: 0, behavior: 'instant' });
      } catch (e) {
          console.error(e);
-         alert("排盘计算出错，请检查数据。");
+         showToast("排盘计算出错，请检查数据。");
      }
-  }, []);
+  }, [showToast]);
 
   const handleSelectCase = useCallback((c: CaseRecord) => {
     handleCalculate({
@@ -94,19 +96,19 @@ const App: React.FC = () => {
     }
 
     switch (activeTab) {
-      case 'INPUT': return <div className="pb-24"><InputForm onCalculate={handleCalculate} /></div>;
-      case 'LIBRARY': 
+      case 'INPUT': return <div className="pb-24 animate-fade-in" key="input"><InputForm onCalculate={handleCalculate} /></div>;
+      case 'LIBRARY':
         return (
-          <div className="pb-24">
-            <CaseLibrary 
-              onSelectCase={handleSelectCase} 
+          <div className="pb-24 animate-fade-in" key="library">
+            <CaseLibrary
+              onSelectCase={handleSelectCase}
               filters={libraryFilters}
               onFiltersChange={setLibraryFilters}
             />
           </div>
         );
-      case 'HUANGLI': return <div className="pb-24"><HuangLi /></div>;
-      case 'ABOUT': return <div className="pb-24"><AuthorInfo /></div>;
+      case 'HUANGLI': return <div className="pb-24 animate-fade-in" key="huangli"><HuangLi /></div>;
+      case 'ABOUT': return <div className="pb-24 animate-fade-in" key="about"><AuthorInfo /></div>;
       default: return null;
     }
   }, [showResult, chartData, activeTab, handleCalculate, handleSelectCase, handleBack, libraryFilters]);

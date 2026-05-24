@@ -1,11 +1,12 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { CalendarType, Gender } from '../types';
-import { MapPin, Search, ChevronRight, Clock, User, Calendar as CalendarIcon, AlertCircle, Lock } from 'lucide-react';
+import { MapPin, Search, ChevronRight, Clock, User, Calendar as CalendarIcon, AlertCircle, Lock, Loader2 } from 'lucide-react';
 import { Solar, Lunar } from 'lunar-typescript';
 import { CHINA_AREA_DATA } from '../utils/areaData';
 import { convertToTrueSolarTime, getMonthStem, getHourStem } from '../utils/baziHelper';
 import { ELEMENT_COLORS, STEM_ELEMENTS, BRANCH_ELEMENTS, HEAVENLY_STEMS, EARTHLY_BRANCHES } from '../constants';
+import { useToast } from './Toast';
 
 interface InputFormProps {
   onCalculate: (data: any) => void;
@@ -20,10 +21,23 @@ const LocationPickerModal: React.FC<{
   const [pIdx, setPIdx] = useState(0);
   const [cIdx, setCIdx] = useState(0);
   const [dIdx, setDIdx] = useState(0);
+  const [searchQuery, setSearchQuery] = useState('');
 
   const provinces = CHINA_AREA_DATA;
   const cities = provinces[pIdx]?.c || [];
   const districts = cities[cIdx]?.c || [];
+
+  const filteredProvinces = searchQuery.trim()
+    ? provinces.filter(p => p.n.includes(searchQuery.trim()))
+    : provinces;
+
+  const filteredCities = searchQuery.trim()
+    ? cities.filter(c => c.n.includes(searchQuery.trim()))
+    : cities;
+
+  const filteredDistricts = searchQuery.trim()
+    ? districts.filter(d => d.n.includes(searchQuery.trim()))
+    : districts;
 
   if (!isOpen) return null;
 
@@ -36,11 +50,33 @@ const LocationPickerModal: React.FC<{
     onClose();
   };
 
+  const handleClose = () => {
+    setSearchQuery('');
+    onClose();
+  };
+
+  const handleProvinceClick = (origIdx: number) => {
+    if (searchQuery.trim()) {
+      const p = filteredProvinces[origIdx];
+      const realIdx = provinces.findIndex(pr => pr.n === p.n);
+      if (realIdx !== -1) {
+        setPIdx(realIdx);
+        setCIdx(0);
+        setDIdx(0);
+        setSearchQuery('');
+      }
+    } else {
+      setPIdx(origIdx);
+      setCIdx(0);
+      setDIdx(0);
+    }
+  };
+
   return (
     <div className="fixed inset-0 z-[200] flex items-end justify-center bg-black/40 backdrop-blur-sm animate-fade-in">
       <div className="bg-[#fdfcf8] w-full max-w-lg rounded-t-[2.5rem] shadow-2xl overflow-hidden flex flex-col animate-slide-up border-t border-stone-200">
         <div className="flex items-center justify-between px-6 pt-6 pb-4">
-          <button onClick={onClose} className="text-stone-400 text-lg hover:text-stone-600 transition-colors">取消</button>
+          <button onClick={handleClose} className="text-stone-400 text-lg hover:text-stone-600 transition-colors">取消</button>
           <div className="flex bg-stone-100 p-1 rounded-full w-44">
              <button onClick={() => setActiveTab('domestic')} className={`flex-1 py-1.5 rounded-full text-sm font-bold transition-all ${activeTab === 'domestic' ? 'bg-[#2b2320] text-white' : 'text-stone-400'}`}>国内</button>
              <button onClick={() => setActiveTab('overseas')} className={`flex-1 py-1.5 rounded-full text-sm font-bold transition-all ${activeTab === 'overseas' ? 'bg-[#2b2320] text-white' : 'text-stone-400'}`}>海外</button>
@@ -51,29 +87,35 @@ const LocationPickerModal: React.FC<{
         <div className="px-6 mb-4">
           <div className="relative">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-stone-300" size={18} />
-            <input type="text" placeholder="搜索省份、城市" className="w-full bg-stone-100 border-none rounded-2xl py-3 pl-11 pr-4 focus:ring-1 focus:ring-stone-200 text-stone-700 placeholder:text-stone-300" />
+            <input
+              type="text"
+              placeholder="搜索省份、城市"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full bg-stone-100 border-none rounded-2xl py-3 pl-11 pr-4 focus:ring-1 focus:ring-stone-200 text-stone-700 placeholder:text-stone-300"
+            />
           </div>
         </div>
 
         <div className="relative h-72 flex overflow-hidden border-t border-stone-100">
           <div className="absolute top-1/2 left-0 w-full h-12 -translate-y-1/2 border-y border-stone-200/50 pointer-events-none z-10 bg-stone-500/5"></div>
-          
+
           <div className="flex-1 overflow-y-auto no-scrollbar py-32 snap-y snap-mandatory text-center">
-             {provinces.map((p, i) => (
-               <div key={p.n} onClick={() => {setPIdx(i); setCIdx(0); setDIdx(0);}} className={`h-12 flex items-center justify-center snap-center text-sm transition-all cursor-pointer ${pIdx === i ? 'text-[#2b2320] font-bold text-lg' : 'text-stone-300'}`}>
+             {filteredProvinces.map((p, i) => (
+               <div key={p.n} onClick={() => handleProvinceClick(i)} className={`h-12 flex items-center justify-center snap-center text-sm transition-all cursor-pointer ${!searchQuery.trim() && pIdx === i ? 'text-[#2b2320] font-bold text-lg' : 'text-stone-400 hover:text-stone-600'}`}>
                  {p.n}
                </div>
              ))}
           </div>
           <div className="flex-1 overflow-y-auto no-scrollbar py-32 snap-y snap-mandatory text-center">
-             {cities.map((c, i) => (
+             {filteredCities.map((c, i) => (
                <div key={c.n} onClick={() => {setCIdx(i); setDIdx(0);}} className={`h-12 flex items-center justify-center snap-center text-sm transition-all cursor-pointer ${cIdx === i ? 'text-[#2b2320] font-bold text-lg' : 'text-stone-300'}`}>
                  {c.n}
                </div>
              ))}
           </div>
           <div className="flex-1 overflow-y-auto no-scrollbar py-32 snap-y snap-mandatory text-center">
-             {districts.map((d, i) => (
+             {filteredDistricts.map((d, i) => (
                <div key={d.n} onClick={() => setDIdx(i)} className={`h-12 flex items-center justify-center snap-center text-sm transition-all cursor-pointer ${dIdx === i ? 'text-[#2b2320] font-bold text-lg' : 'text-stone-300'}`}>
                  {d.n}
                </div>
@@ -121,6 +163,7 @@ const CharacterBlock: React.FC<{ char: string; isStem: boolean }> = ({ char, isS
 };
 
 const InputForm: React.FC<InputFormProps> = ({ onCalculate }) => {
+  const { showToast } = useToast();
   const [name, setName] = useState('');
   const [gender, setGender] = useState<Gender>(Gender.MALE);
   const [calendarType, setCalendarType] = useState<CalendarType>(CalendarType.SOLAR);
@@ -131,6 +174,7 @@ const InputForm: React.FC<InputFormProps> = ({ onCalculate }) => {
   const [locationName, setLocationName] = useState('北京市 东城区');
   const [isPickerOpen, setIsPickerOpen] = useState(false);
   const [currentTime, setCurrentTime] = useState(new Date());
+  const [isCalculating, setIsCalculating] = useState(false);
 
   const [directData, setDirectData] = useState({
     yearGan: '甲', yearZhi: '子',
@@ -173,12 +217,17 @@ const InputForm: React.FC<InputFormProps> = ({ onCalculate }) => {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (calendarType !== CalendarType.DIRECT && (!dateStr || !timeStr)) {
-        alert("请选择完整的出生日期和时间");
+        showToast("请选择完整的出生日期和时间");
         return;
     }
+    setIsCalculating(true);
     const [year, month, day] = dateStr ? String(dateStr).split('-').map(Number) : [0,0,0];
     const [hour, minute] = timeStr ? String(timeStr).split(':').map(Number) : [0,0];
-    onCalculate({ year, month, day, hour, minute, gender, type: calendarType, useTrueSolarTime, longitude: parseFloat(longitude) || 120.0, directData });
+    // 短暂延迟以显示 loading 状态，避免计算阻塞 UI 反馈
+    setTimeout(() => {
+      onCalculate({ year, month, day, hour, minute, gender, type: calendarType, useTrueSolarTime, longitude: parseFloat(longitude) || 120.0, directData });
+      setIsCalculating(false);
+    }, 50);
   };
 
   const handleDirectChange = (key: string, val: string) => {
@@ -258,7 +307,7 @@ const InputForm: React.FC<InputFormProps> = ({ onCalculate }) => {
               <div className="grid grid-cols-4 gap-1 bg-stone-200/30 p-2 rounded-2xl border border-stone-200/60 shadow-inner">
                 {['year', 'month', 'day', 'hour'].map((p, idx) => (
                   <div key={p} className="flex flex-col gap-1">
-                    <div className="text-[8px] text-stone-400 font-bold text-center uppercase tracking-tighter">
+                    <div className="text-[10px] text-stone-400 font-bold text-center uppercase tracking-tighter">
                       {['年', '月', '日', '时'][idx]}
                     </div>
                     {(p === 'month' || p === 'hour') ? (
@@ -289,12 +338,20 @@ const InputForm: React.FC<InputFormProps> = ({ onCalculate }) => {
           )}
         </div>
 
-        <button 
+        <button
           onClick={handleSubmit}
-          className="group relative w-full py-4 bg-[#2b2320] text-white rounded-xl text-lg font-bold tracking-[0.4em] shadow-lg overflow-hidden hover:shadow-xl active:scale-[0.99] transition-all mt-6"
+          disabled={isCalculating}
+          className="group relative w-full py-4 bg-[#2b2320] text-white rounded-xl text-lg font-bold tracking-[0.4em] shadow-lg overflow-hidden hover:shadow-xl active:scale-[0.99] transition-all mt-6 disabled:opacity-80 disabled:cursor-not-allowed"
         >
           <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
-          <span>开始排盘</span>
+          {isCalculating ? (
+            <span className="flex items-center justify-center gap-2">
+              <Loader2 size={20} className="animate-spin" />
+              计算中...
+            </span>
+          ) : (
+            <span>开始排盘</span>
+          )}
         </button>
 
         {/* 即时局预览 */}
@@ -305,14 +362,14 @@ const InputForm: React.FC<InputFormProps> = ({ onCalculate }) => {
                   <div className="flex flex-row items-end justify-between w-full max-w-[240px] md:max-w-xs mb-2 px-1">
                     {currentInfo.pillars.map((p, i) => (
                       <div key={i} className="flex flex-col items-center gap-0.5">
-                         <span className="text-[8px] md:text-[9px] font-bold text-stone-300 leading-none">{p.label}</span>
+                         <span className="text-[9px] md:text-[10px] font-bold text-stone-400 leading-none">{p.label}</span>
                          <CharacterBlock char={p.gan} isStem={true} />
                          <CharacterBlock char={p.zhi} isStem={false} />
                       </div>
                     ))}
                   </div>
                   <div className="w-full text-center space-y-0.5 border-t border-stone-100/50 pt-1.5">
-                     <p className="text-[8px] md:text-[10px] text-stone-500 font-bold truncate leading-none">
+                     <p className="text-[9px] md:text-[10px] text-stone-500 font-bold truncate leading-none">
                        农历: {currentInfo.lunarText}
                      </p>
                      <p className="text-[8px] md:text-[10px] text-stone-400 font-medium truncate leading-none opacity-80">

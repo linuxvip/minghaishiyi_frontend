@@ -1,8 +1,8 @@
 
-import React, { useRef, useEffect, useState, useMemo } from 'react';
+import React, { useRef, useEffect, useState, useMemo, useCallback } from 'react';
 import { BaZiChart, PillarData } from '../types';
 import { ELEMENT_COLORS } from '../constants';
-import { Calendar, AlertTriangle } from 'lucide-react';
+import { Calendar, AlertTriangle, ChevronLeft, ChevronRight } from 'lucide-react';
 
 interface BaZiChartDisplayProps {
   chart: BaZiChart;
@@ -45,6 +45,8 @@ const BaZiChartDisplay: React.FC<BaZiChartDisplayProps> = ({ chart }) => {
 
   const [selectedLuckIdx, setSelectedLuckIdx] = useState<number | null>(null);
   const [selectedYear, setSelectedYear] = useState<number | null>(currentYear);
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(false);
 
   const solarDateStr = String(chart.solarDate || '');
   const isMatchingFailed = solarDateStr.includes('失败');
@@ -54,6 +56,27 @@ const BaZiChartDisplay: React.FC<BaZiChartDisplayProps> = ({ chart }) => {
     setSelectedLuckIdx(initialIdx !== -1 ? initialIdx : 0);
     setSelectedYear(currentYear);
   }, [chart, currentYear]);
+
+  const updateScrollState = useCallback(() => {
+    const el = luckRef.current;
+    if (!el) return;
+    setCanScrollLeft(el.scrollLeft > 2);
+    setCanScrollRight(el.scrollLeft + el.clientWidth < el.scrollWidth - 2);
+  }, []);
+
+  useEffect(() => {
+    const el = luckRef.current;
+    if (!el) return;
+    updateScrollState();
+    el.addEventListener('scroll', updateScrollState, { passive: true });
+    return () => el.removeEventListener('scroll', updateScrollState);
+  }, [updateScrollState, chart]);
+
+  const scrollLuck = (direction: 'left' | 'right') => {
+    const el = luckRef.current;
+    if (!el) return;
+    el.scrollBy({ left: direction === 'left' ? -150 : 150, behavior: 'smooth' });
+  };
 
   return (
     // 减小整体容器圆角从 3xl 到 2xl，防止边缘内容在 mobile 上被大幅度切除
@@ -114,14 +137,34 @@ const BaZiChartDisplay: React.FC<BaZiChartDisplayProps> = ({ chart }) => {
                   <Calendar size={14} />
                   <span>运限推演</span>
                 </div>
-                {selectedYear && (
-                   <span className="text-[10px] md:text-xs font-bold text-amber-900 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200/50">
-                    {selectedYear}年
-                  </span>
-                )}
+                <div className="flex items-center gap-2">
+                  {selectedYear && (
+                     <span className="text-[10px] md:text-xs font-bold text-amber-900 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200/50">
+                      {selectedYear}年
+                    </span>
+                  )}
+                  <span className="text-[9px] text-stone-300 hidden md:inline">左右滑动查看</span>
+                </div>
              </div>
-            
-            <div 
+
+            <div className="relative group">
+              {canScrollLeft && (
+                <div className="absolute left-0 top-0 bottom-0 w-8 bg-gradient-to-r from-white/90 to-transparent z-10 pointer-events-none" />
+              )}
+              {canScrollRight && (
+                <div className="absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-r from-transparent to-white/90 z-10 pointer-events-none" />
+              )}
+              {canScrollLeft && (
+                <button onClick={() => scrollLuck('left')} className="absolute left-1 top-1/2 -translate-y-1/2 z-20 w-6 h-6 bg-white/90 rounded-full shadow border border-stone-200 flex items-center justify-center hover:bg-white transition-all">
+                  <ChevronLeft size={14} className="text-stone-500" />
+                </button>
+              )}
+              {canScrollRight && (
+                <button onClick={() => scrollLuck('right')} className="absolute right-1 top-1/2 -translate-y-1/2 z-20 w-6 h-6 bg-white/90 rounded-full shadow border border-stone-200 flex items-center justify-center hover:bg-white transition-all">
+                  <ChevronRight size={14} className="text-stone-500" />
+                </button>
+              )}
+            <div
               ref={luckRef}
               className="flex w-full overflow-x-auto no-scrollbar bg-white"
             >
@@ -148,15 +191,15 @@ const BaZiChartDisplay: React.FC<BaZiChartDisplayProps> = ({ chart }) => {
                             `}>
                                 {isPreLuck ? (
                                   <div className="flex flex-col items-center">
-                                    <span className="text-[8px] md:text-[9px] text-stone-400 font-bold">小运</span>
+                                    <span className="text-[10px] md:text-[11px] text-stone-400 font-bold">小运</span>
                                   </div>
                                 ) : (
                                   <div className="flex flex-col items-center">
-                                    <span className="text-[7px] md:text-[10px] text-stone-300 font-mono">{lp.startYear}</span>
+                                    <span className="text-[10px] md:text-xs text-stone-400 font-mono">{lp.startYear}</span>
                                     <span className={`text-sm md:text-2xl font-bold leading-none ${isSelectedLuck || isCurrentDaYun ? 'text-amber-900' : 'text-stone-700'}`}>
                                         {lp.gan}{lp.zhi}
                                     </span>
-                                    <span className="text-[7px] md:text-[10px] text-stone-400 mt-0.5">{lp.startAge}岁</span>
+                                    <span className="text-[10px] md:text-[10px] text-stone-400 mt-0.5">{lp.startAge}岁</span>
                                   </div>
                                 )}
                             </div>
@@ -175,7 +218,7 @@ const BaZiChartDisplay: React.FC<BaZiChartDisplayProps> = ({ chart }) => {
                                             }}
                                             // 优化内边距，确保文字在极窄列中仍能居中展示
                                             className={`
-                                                flex justify-center items-center py-1.5 md:py-2 text-[10px] md:text-lg transition-all duration-200 border-b border-stone-50/50
+                                                flex justify-center items-center py-1.5 md:py-2 text-xs md:text-lg transition-all duration-200 border-b border-stone-50/50
                                                 ${isUserSelectedYear 
                                                    ? 'bg-amber-500 text-white z-10 font-bold' 
                                                    : isRealCurrentYear 
@@ -191,6 +234,7 @@ const BaZiChartDisplay: React.FC<BaZiChartDisplayProps> = ({ chart }) => {
                         </div>
                     );
                 })}
+            </div>
             </div>
         </div>
       ) : null}

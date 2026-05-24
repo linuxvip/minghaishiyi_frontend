@@ -246,7 +246,7 @@ const CaseLibrary: React.FC<CaseLibraryProps> = ({ onSelectCase, filters, onFilt
                       <span className="text-xs font-bold text-stone-800">{c.source}</span>
                       <div className="flex gap-1 mt-0.5">
                         {c.tags.slice(0, 3).map((t, idx) => (
-                          <span key={idx} className="text-[9px] bg-stone-100 text-stone-500 px-1.5 py-0.5 rounded-md">{t}</span>
+                          <span key={idx} className="text-[10px] bg-stone-100 text-stone-500 px-1.5 py-0.5 rounded-md">{t}</span>
                         ))}
                       </div>
                     </div>
@@ -270,7 +270,7 @@ const CaseLibrary: React.FC<CaseLibraryProps> = ({ onSelectCase, filters, onFilt
                  </p>
                  <button
                    onClick={(e) => toggleExpand(c.id, e)}
-                   className="self-start text-[10px] font-bold text-amber-600 hover:text-amber-800 transition-colors flex items-center gap-0.5"
+                   className="self-start text-[11px] font-bold text-amber-600 hover:text-amber-800 transition-colors flex items-center gap-0.5"
                  >
                    {expandedIds.has(c.id) ? '收起' : '展开'}
                    <ChevronDown size={10} className={`transition-transform ${expandedIds.has(c.id) ? 'rotate-180' : ''}`} />
@@ -289,16 +289,33 @@ const CaseLibrary: React.FC<CaseLibraryProps> = ({ onSelectCase, filters, onFilt
         </div>
       )}
 
-      {/* 无数据或错误状态 */}
-      {!isLoading && (error || cases.length === 0) && (
+      {/* 错误状态 */}
+      {!isLoading && error && (
+        <div className="bg-white rounded-[2.5rem] py-12 px-8 md:py-20 border border-rose-200 border-dashed flex flex-col items-center justify-center text-center animate-fade-in shadow-inner">
+           <div className="w-16 h-16 bg-rose-50 rounded-full flex items-center justify-center text-rose-300 mb-5">
+              <AlertCircle size={32} />
+           </div>
+           <h3 className="text-rose-600 font-bold text-lg">网络连接失败</h3>
+           <p className="text-stone-400 text-sm mt-2">无法连接到服务器，请检查网络后重试</p>
+           <button
+             onClick={() => fetchCases(false)}
+             className="mt-5 px-5 py-2 bg-rose-50 text-rose-600 rounded-xl text-xs font-bold hover:bg-rose-100 transition-colors"
+           >
+             重新加载
+           </button>
+        </div>
+      )}
+
+      {/* 空结果状态 */}
+      {!isLoading && !error && cases.length === 0 && (
         <div className="bg-white rounded-[2.5rem] py-12 px-8 md:py-20 border border-stone-200 border-dashed flex flex-col items-center justify-center text-center animate-fade-in shadow-inner">
            <div className="w-16 h-16 bg-stone-50 rounded-full flex items-center justify-center text-stone-200 mb-5">
-              {error ? <AlertCircle size={32} /> : <Sparkles size={32} />}
+              <Sparkles size={32} />
            </div>
            <h3 className="text-stone-400 font-bold text-lg">系统中当前无匹配记录</h3>
            <p className="text-stone-300 text-sm mt-2 tracking-widest font-serif italic">命海拾遗</p>
-           {isFiltered && !error && (
-             <button 
+           {isFiltered && (
+             <button
                onClick={resetFilters}
                className="mt-6 text-amber-600 text-xs font-bold hover:underline"
              >

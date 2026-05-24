@@ -200,7 +200,7 @@ const HuangLi: React.FC = () => {
               key={b} 
               onClick={() => selectBranch(b)}
               className={`
-                w-5 h-5 md:w-6 md:h-6 flex items-center justify-center rounded-full text-[9px] md:text-xs font-bold transition-all
+                w-8 h-8 md:w-9 md:h-9 flex items-center justify-center rounded-full text-[11px] md:text-sm font-bold transition-all
                 ${data.currentSelectedBranch === b ? 'bg-[#8a1a1b] text-white shadow-md scale-110' : 'text-stone-400 border border-stone-100 bg-white hover:border-[#8a1a1b]/30'}
               `}
             >
@@ -253,15 +253,15 @@ const HuangLi: React.FC = () => {
                     <span className={`text-sm md:text-lg font-serif font-black leading-none mb-0.5 ${selected ? 'text-white' : (isWeekend ? 'text-[#8a1a1b]' : 'text-stone-800')}`}>
                       {d.getDay()}
                     </span>
-                    <span className={`text-[8px] md:text-[9px] scale-90 leading-none mb-0.5 font-bold ${selected ? 'text-stone-300' : (jq ? 'text-[#8a1a1b]' : 'text-stone-400')}`}>
+                    <span className={`text-[8px] md:text-[10px] scale-90 leading-none mb-0.5 font-bold ${selected ? 'text-stone-300' : (jq ? 'text-[#8a1a1b]' : 'text-stone-500')}`}>
                       {jq || (isFirstDay ? l.getMonthInChinese() + '月' : lunarDay)}
                     </span>
-                    <span className={`text-[9px] md:text-[11px] font-bold leading-none ${selected ? 'text-stone-400' : (jq ? 'text-[#8a1a1b]/70' : 'text-stone-300')}`}>
+                    <span className={`text-[10px] md:text-xs font-bold leading-none ${selected ? 'text-stone-400' : (jq ? 'text-[#8a1a1b]/70' : 'text-stone-400')}`}>
                       {gz}
                     </span>
                   </div>
                   {today && !selected && (
-                    <div className="absolute top-1 right-1 w-0.5 h-0.5 md:w-1 md:h-1 bg-[#8a1a1b] rounded-full"></div>
+                    <div className="absolute top-1 right-1 w-1.5 h-1.5 md:w-2 md:h-2 bg-[#8a1a1b] rounded-full shadow-sm ring-1 ring-white"></div>
                   )}
                 </button>
               );
@@ -272,7 +272,7 @@ const HuangLi: React.FC = () => {
       
       {/* 底部备注 */}
       <div className="mt-3 md:mt-4 text-center px-4">
-        <p className="text-[7px] md:text-[9px] font-bold text-stone-300 tracking-[0.2em] md:tracking-[0.3em] uppercase italic">
+        <p className="text-[10px] md:text-[11px] font-bold text-stone-300 tracking-[0.2em] md:tracking-[0.3em] uppercase italic">
           Almanac Algorithm by MingHaiShiYi
         </p>
       </div>
