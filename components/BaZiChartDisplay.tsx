@@ -189,19 +189,13 @@ const BaZiChartDisplay: React.FC<BaZiChartDisplayProps> = ({ chart }) => {
                                 py-1.5 text-center border-b flex flex-col justify-center min-h-[45px] md:min-h-[80px] transition-colors
                                 ${isSelectedLuck ? 'bg-amber-100/30' : (isCurrentDaYun ? 'bg-amber-50/20' : 'bg-stone-50/20')}
                             `}>
-                                {isPreLuck ? (
-                                  <div className="flex flex-col items-center">
-                                    <span className="text-[10px] md:text-[11px] text-stone-400 font-bold">小运</span>
-                                  </div>
-                                ) : (
                                   <div className="flex flex-col items-center">
                                     <span className="text-[10px] md:text-xs text-stone-400 font-mono">{lp.startYear}</span>
                                     <span className={`text-sm md:text-2xl font-bold leading-none ${isSelectedLuck || isCurrentDaYun ? 'text-amber-900' : 'text-stone-700'}`}>
-                                        {lp.gan}{lp.zhi}
+                                        {isPreLuck ? '小运' : `${lp.gan}${lp.zhi}`}
                                     </span>
                                     <span className="text-[10px] md:text-[10px] text-stone-400 mt-0.5">{lp.startAge}岁</span>
                                   </div>
-                                )}
                             </div>
 
                             <div className="flex flex-col">
