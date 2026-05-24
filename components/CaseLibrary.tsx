@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { CaseRecord, Gender } from '../types';
-import { Zap, Trash2, Search, Loader2, Database, AlertCircle, ChevronDown, Sparkles, ArrowUp } from 'lucide-react';
+import { Trash2, Search, Loader2, Database, AlertCircle, ChevronDown, Sparkles, ArrowUp } from 'lucide-react';
 import { ELEMENT_COLORS, STEM_ELEMENTS, BRANCH_ELEMENTS, HEAVENLY_STEMS, EARTHLY_BRANCHES } from '../constants';
 
 /**
@@ -51,6 +51,20 @@ const CaseLibrary: React.FC<CaseLibraryProps> = ({ onSelectCase, filters, onFilt
 
   // 使用解构方便代码引用
   const { gender: filterGender, pillars: pillarFilters } = filters;
+
+  const LABEL_KEYS = ['出身', '学历', '职业类别', '职业细分', '婚姻状态', '财富层次'];
+
+  const parseLabelTags = (label: any): string[] => {
+    if (!label) return [];
+    try {
+      const obj = JSON.parse(String(label));
+      return LABEL_KEYS
+        .map(key => obj[key])
+        .filter(v => v !== undefined && v !== null && v !== '' && v !== 0);
+    } catch {
+      return String(label).split(/[，,]/).filter(Boolean);
+    }
+  };
 
   const mapGenderToApi = (g: string) => {
     if (g === Gender.MALE) return '1';
@@ -112,7 +126,7 @@ const CaseLibrary: React.FC<CaseLibraryProps> = ({ onSelectCase, filters, onFilt
         dayGZ: item.day_ganzhi || '',
         hourGZ: item.hour_ganzhi || '',
         feedback: item.feedback || '暂无反馈内容',
-        tags: item.label ? String(item.label).split(/[，,]/) : []
+        tags: parseLabelTags(item.label)
       }));
 
       if (isLoadMore) {
@@ -257,16 +271,15 @@ const CaseLibrary: React.FC<CaseLibraryProps> = ({ onSelectCase, filters, onFilt
                     </div>
                     <div className="flex flex-col">
                       <span className="text-xs font-bold text-stone-800">{c.source}</span>
-                      <div className="flex gap-1 mt-0.5">
-                        {c.tags.slice(0, 3).map((t, idx) => (
-                          <span key={idx} className="text-[10px] bg-stone-100 text-stone-500 px-1.5 py-0.5 rounded-md">{t}</span>
+                      <div className="flex flex-wrap gap-1 mt-0.5">
+                        {c.tags.slice(0, 6).map((t, idx) => (
+                          <span key={idx} className="text-[10px] bg-amber-50 text-amber-700 px-1.5 py-0.5 rounded-md whitespace-nowrap">{t}</span>
                         ))}
+                        {c.tags.length > 6 && (
+                          <span className="text-[10px] text-stone-400 px-1 py-0.5">+{c.tags.length - 6}</span>
+                        )}
                       </div>
                     </div>
-                  </div>
-                  <div className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-50 border border-amber-200/50 rounded-xl text-amber-600 group-hover:bg-amber-100 group-hover:text-amber-700 transition-all duration-300 shadow-sm group-hover:shadow-md active:scale-95">
-                    <Zap size={14} className="fill-amber-500/10" />
-                    <span className="text-[10px] font-bold tracking-tight">命例排盘</span>
                   </div>
                </div>
 
