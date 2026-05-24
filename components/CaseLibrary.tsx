@@ -1,7 +1,7 @@
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { CaseRecord, Gender } from '../types';
-import { Zap, Trash2, Search, Loader2, Database, AlertCircle, ChevronDown, Sparkles } from 'lucide-react';
+import { Zap, Trash2, Search, Loader2, Database, AlertCircle, ChevronDown, Sparkles, ArrowUp } from 'lucide-react';
 import { ELEMENT_COLORS, STEM_ELEMENTS, BRANCH_ELEMENTS, HEAVENLY_STEMS, EARTHLY_BRANCHES } from '../constants';
 
 /**
@@ -45,6 +45,9 @@ const CaseLibrary: React.FC<CaseLibraryProps> = ({ onSelectCase, filters, onFilt
   const [nextUrl, setNextUrl] = useState<string | null>(null);
   const [error, setError] = useState<boolean>(false);
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
+  const [showBackToTop, setShowBackToTop] = useState(false);
+
+  const topRef = useRef<HTMLDivElement>(null);
 
   // 使用解构方便代码引用
   const { gender: filterGender, pillars: pillarFilters } = filters;
@@ -169,8 +172,18 @@ const CaseLibrary: React.FC<CaseLibraryProps> = ({ onSelectCase, filters, onFilt
 
   const isFiltered = filterGender !== 'ALL' || pillarFilters.year || pillarFilters.month || pillarFilters.day || pillarFilters.hour;
 
+  useEffect(() => {
+    const onScroll = () => setShowBackToTop(window.scrollY > 500);
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
+
+  const scrollToTop = () => {
+    topRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+
   return (
-    <div className="flex flex-col gap-3 animate-fade-in">
+    <div ref={topRef} className="flex flex-col gap-3 animate-fade-in">
       {/* 筛选面板 */}
       <div className="bg-white p-6 rounded-[2.5rem] border border-stone-200 shadow-sm flex flex-col gap-6">
         <div className="flex flex-col md:flex-row items-center justify-center gap-4">
@@ -327,7 +340,7 @@ const CaseLibrary: React.FC<CaseLibraryProps> = ({ onSelectCase, filters, onFilt
 
       {/* 加载更多 */}
       {nextUrl && !error && (
-        <button 
+        <button
           onClick={() => fetchCases(true)}
           disabled={isAppending}
           className="w-full py-4 bg-white border border-stone-200 rounded-2xl text-stone-500 text-sm font-bold hover:bg-stone-50 transition-all flex items-center justify-center gap-2 active:scale-[0.98]"
@@ -343,6 +356,16 @@ const CaseLibrary: React.FC<CaseLibraryProps> = ({ onSelectCase, filters, onFilt
               <ChevronDown size={16} />
             </>
           )}
+        </button>
+      )}
+
+      {/* 回到顶部 */}
+      {showBackToTop && (
+        <button
+          onClick={scrollToTop}
+          className="fixed bottom-16 right-4 md:right-8 z-50 w-10 h-10 bg-white/90 backdrop-blur border border-stone-200 rounded-full shadow-lg flex items-center justify-center text-stone-400 hover:text-[#2b2320] hover:border-stone-300 transition-all animate-fade-in"
+        >
+          <ArrowUp size={18} />
         </button>
       )}
     </div>

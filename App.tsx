@@ -75,7 +75,7 @@ const App: React.FC = () => {
   const currentView = useMemo(() => {
     if (showResult && chartData) {
       return (
-        <div className="animate-fade-in pb-24">
+        <div className="animate-fade-in pb-20">
            <div className="w-full flex items-center justify-between py-2 mb-2 border-b border-stone-200/50">
              <button 
                onClick={handleBack}
@@ -96,10 +96,10 @@ const App: React.FC = () => {
     }
 
     switch (activeTab) {
-      case 'INPUT': return <div className="pb-24 animate-fade-in" key="input"><InputForm onCalculate={handleCalculate} /></div>;
+      case 'INPUT': return <div className="pb-20 animate-fade-in" key="input"><InputForm onCalculate={handleCalculate} /></div>;
       case 'LIBRARY':
         return (
-          <div className="pb-24 animate-fade-in" key="library">
+          <div className="pb-20 animate-fade-in" key="library">
             <CaseLibrary
               onSelectCase={handleSelectCase}
               filters={libraryFilters}
@@ -107,8 +107,8 @@ const App: React.FC = () => {
             />
           </div>
         );
-      case 'HUANGLI': return <div className="pb-24 animate-fade-in" key="huangli"><HuangLi /></div>;
-      case 'ABOUT': return <div className="pb-24 animate-fade-in" key="about"><AuthorInfo /></div>;
+      case 'HUANGLI': return <div className="pb-20 animate-fade-in" key="huangli"><HuangLi /></div>;
+      case 'ABOUT': return <div className="pb-20 animate-fade-in" key="about"><AuthorInfo /></div>;
       default: return null;
     }
   }, [showResult, chartData, activeTab, handleCalculate, handleSelectCase, handleBack, libraryFilters]);
@@ -135,30 +135,30 @@ const App: React.FC = () => {
         {currentView}
       </main>
       
-      <nav className="fixed bottom-0 left-0 right-0 z-[100] px-4 pb-6 pt-2 pointer-events-none">
-        <div className="max-w-md mx-auto bg-white/90 backdrop-blur-xl border border-stone-200/50 rounded-[2rem] shadow-2xl pointer-events-auto flex items-center justify-around p-2">
-          <NavButton 
-            active={!showResult && activeTab === 'INPUT'} 
+      <nav className="fixed bottom-0 left-0 right-0 z-[100] bg-white/75 backdrop-blur-md border-t border-stone-200/60 safe-area-bottom">
+        <div className="max-w-4xl mx-auto flex items-center justify-around py-1.5">
+          <NavButton
+            active={!showResult && activeTab === 'INPUT'}
             onClick={() => { setActiveTab('INPUT'); setShowResult(false); }}
-            icon={<LayoutGrid size={22} />}
+            icon={<LayoutGrid size={24} strokeWidth={1.5} />}
             label="排盘"
           />
-          <NavButton 
-            active={!showResult && activeTab === 'LIBRARY'} 
+          <NavButton
+            active={!showResult && activeTab === 'LIBRARY'}
             onClick={() => { setActiveTab('LIBRARY'); setShowResult(false); }}
-            icon={<Library size={22} />}
+            icon={<Library size={24} strokeWidth={1.5} />}
             label="命例库"
           />
-          <NavButton 
-            active={!showResult && activeTab === 'HUANGLI'} 
+          <NavButton
+            active={!showResult && activeTab === 'HUANGLI'}
             onClick={() => { setActiveTab('HUANGLI'); setShowResult(false); }}
-            icon={<CalendarDays size={22} />}
+            icon={<CalendarDays size={24} strokeWidth={1.5} />}
             label="黄历"
           />
-          <NavButton 
-            active={!showResult && activeTab === 'ABOUT'} 
+          <NavButton
+            active={!showResult && activeTab === 'ABOUT'}
             onClick={() => { setActiveTab('ABOUT'); setShowResult(false); }}
-            icon={<User size={22} />}
+            icon={<User size={24} strokeWidth={1.5} />}
             label="作者"
           />
         </div>
@@ -175,19 +175,19 @@ interface NavButtonProps {
 }
 
 const NavButton: React.FC<NavButtonProps> = ({ active, onClick, icon, label }) => (
-  <button 
+  <button
     onClick={onClick}
-    className={`flex flex-col items-center gap-1 flex-1 py-2 rounded-2xl transition-all duration-300 relative ${active ? 'text-[#2b2320]' : 'text-stone-300 hover:text-stone-400'}`}
+    className={`flex flex-col items-center gap-0.5 flex-1 py-1 transition-all duration-200 ${active ? 'text-[#2b2320]' : 'text-stone-350'}`}
   >
-    <div className={`transition-transform duration-300 ${active ? 'scale-110 -translate-y-0.5' : ''}`}>
+    <span className={`relative transition-all duration-200 ${active ? 'scale-105' : ''}`}>
+      {active && (
+        <span className="absolute inset-0 scale-125 rounded-lg bg-amber-400/15 -z-10" />
+      )}
       {icon}
-    </div>
-    <span className={`text-[10px] font-bold tracking-widest transition-all ${active ? 'opacity-100' : 'opacity-60'}`}>
+    </span>
+    <span className={`text-[10px] font-semibold tracking-wide transition-all ${active ? 'opacity-100' : 'opacity-50'}`}>
       {label}
     </span>
-    {active && (
-      <div className="absolute -bottom-1 w-1 h-1 bg-[#2b2320] rounded-full animate-fade-in"></div>
-    )}
   </button>
 );
 
