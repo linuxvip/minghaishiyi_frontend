@@ -14,6 +14,8 @@ interface CaseLibraryProps {
   onSelectCase: (caseData: any) => void;
   filters: {
     gender: string;
+    source: string;
+    label: string;
     pillars: { year: string; month: string; day: string; hour: string };
   };
   onFiltersChange: (newFilters: any) => void;
@@ -46,11 +48,19 @@ const CaseLibrary: React.FC<CaseLibraryProps> = ({ onSelectCase, filters, onFilt
   const [error, setError] = useState<boolean>(false);
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
   const [showBackToTop, setShowBackToTop] = useState(false);
+  const [sourceOptions, setSourceOptions] = useState<string[]>([]);
 
   const topRef = useRef<HTMLDivElement>(null);
 
+  useEffect(() => {
+    fetch('/api/destiny-cases/sources/')
+      .then(res => res.json())
+      .then(data => setSourceOptions(data.sources || []))
+      .catch(() => {});
+  }, []);
+
   // 使用解构方便代码引用
-  const { gender: filterGender, pillars: pillarFilters } = filters;
+  const { gender: filterGender, source: filterSource, label: filterLabel, pillars: pillarFilters } = filters;
 
   const LABEL_KEYS = ['出身', '学历', '职业类别', '职业细分', '婚姻状态', '财富层次'];
 
@@ -96,6 +106,8 @@ const CaseLibrary: React.FC<CaseLibraryProps> = ({ onSelectCase, filters, onFilt
     try {
       const params = new URLSearchParams();
       if (filterGender !== 'ALL') params.append('gender', mapGenderToApi(filterGender));
+      if (filterSource !== 'ALL') params.append('source', filterSource);
+      if (filterLabel) params.append('label', filterLabel);
       if (pillarFilters.year) params.append('year_ganzhi', pillarFilters.year);
       if (pillarFilters.month) params.append('month_ganzhi', pillarFilters.month);
       if (pillarFilters.day) params.append('day_ganzhi', pillarFilters.day);
@@ -147,18 +159,24 @@ const CaseLibrary: React.FC<CaseLibraryProps> = ({ onSelectCase, filters, onFilt
       setIsLoading(false);
       setIsAppending(false);
     }
-  }, [filterGender, pillarFilters, nextUrl]);
+  }, [filterGender, filterSource, filterLabel, pillarFilters, nextUrl]);
+
+  useEffect(() => {
+    fetchCases(false);
+  }, [filterGender, filterSource, filterLabel]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
       fetchCases(false);
     }, 400);
     return () => clearTimeout(timer);
-  }, [filterGender, pillarFilters]);
+  }, [pillarFilters]);
 
   const resetFilters = () => {
     onFiltersChange({
       gender: 'ALL',
+      source: 'ALL',
+      label: '',
       pillars: { year: '', month: '', day: '', hour: '' }
     });
   };
@@ -184,7 +202,7 @@ const CaseLibrary: React.FC<CaseLibraryProps> = ({ onSelectCase, filters, onFilt
     });
   }, []);
 
-  const isFiltered = filterGender !== 'ALL' || pillarFilters.year || pillarFilters.month || pillarFilters.day || pillarFilters.hour;
+  const isFiltered = filterGender !== 'ALL' || filterSource !== 'ALL' || filterLabel || pillarFilters.year || pillarFilters.month || pillarFilters.day || pillarFilters.hour;
 
   useEffect(() => {
     const onScroll = () => setShowBackToTop(window.scrollY > 500);
@@ -199,12 +217,13 @@ const CaseLibrary: React.FC<CaseLibraryProps> = ({ onSelectCase, filters, onFilt
   return (
     <div ref={topRef} className="flex flex-col gap-3 animate-fade-in">
       {/* 筛选面板 */}
-      <div className="bg-white p-6 rounded-[2.5rem] border border-stone-200 shadow-sm flex flex-col gap-6">
-        <div className="flex flex-col md:flex-row items-center justify-center gap-4">
-          <div className="flex bg-stone-100 p-1.5 rounded-2xl border border-stone-200/50 w-full md:w-auto max-w-sm">
+      <div className="bg-white p-6 rounded-[2.5rem] border border-stone-200 shadow-sm flex flex-col gap-5">
+        {/* 第一行：性别 */}
+        <div className="flex justify-center">
+          <div className="flex bg-stone-100 p-1.5 rounded-2xl border border-stone-200/50">
              {['ALL', Gender.MALE, Gender.FEMALE].map(g => (
-               <button 
-                 key={g} 
+               <button
+                 key={g}
                  onClick={() => handleGenderChange(g)}
                  className={`flex-1 md:flex-initial px-8 py-2 rounded-xl text-[11px] font-bold transition-all ${filterGender === g ? 'bg-white text-[#2b2320] shadow-md ring-1 ring-black/5' : 'text-stone-400 hover:text-stone-500'}`}
                >
@@ -214,7 +233,32 @@ const CaseLibrary: React.FC<CaseLibraryProps> = ({ onSelectCase, filters, onFilt
           </div>
         </div>
 
-        {/* 筛选输入框区域 */}
+        {/* 第二行：来源 + 关键词 */}
+        <div className="flex flex-col md:flex-row items-center gap-3">
+          <select
+            value={filterSource}
+            onChange={(e) => onFiltersChange({ ...filters, source: e.target.value })}
+            className="w-full md:w-auto bg-stone-100 border-none rounded-xl py-2 px-4 text-[11px] font-bold text-stone-600 outline-none focus:ring-1 focus:ring-stone-200 cursor-pointer"
+          >
+            <option value="ALL">全部来源</option>
+            {sourceOptions.map(s => (
+              <option key={s} value={s}>{s}</option>
+            ))}
+          </select>
+
+          <div className="relative w-full md:flex-1">
+            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-stone-300" />
+            <input
+              type="text"
+              value={filterLabel}
+              onChange={(e) => onFiltersChange({ ...filters, label: e.target.value })}
+              placeholder="搜索标签关键词..."
+              className="w-full bg-stone-100 border-none rounded-xl py-2 pl-9 pr-3 text-[11px] font-bold text-stone-600 outline-none focus:ring-1 focus:ring-stone-200 placeholder:text-stone-300"
+            />
+          </div>
+        </div>
+
+        {/* 第三行：四柱 */}
         <div className="grid grid-cols-4 gap-3 md:gap-4">
           {['year', 'month', 'day', 'hour'].map((p) => (
              <div key={p} className="flex flex-col gap-1.5">

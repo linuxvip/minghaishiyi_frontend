@@ -21,6 +21,8 @@ const App: React.FC = () => {
 
   const [libraryFilters, setLibraryFilters] = useState({
     gender: 'ALL',
+    source: 'ALL',
+    label: '',
     pillars: { year: '', month: '', day: '', hour: '' }
   });
 
