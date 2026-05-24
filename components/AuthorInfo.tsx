@@ -34,18 +34,10 @@ const AuthorInfo: React.FC = () => {
           </p>
         </div>
 
-        {/* 公众号二维码区域 */}
-        <div className="mt-8 mb-4 p-2 bg-stone-50 rounded-3xl border border-stone-100 relative group cursor-pointer shadow-inner">
-          <div className="w-44 h-44 bg-white rounded-2xl flex items-center justify-center border border-stone-100 overflow-hidden shadow-sm">
-             <img 
-               src="https://i.imgs.ovh/2025/12/30/C1wtZb.jpeg" 
-               alt="命海拾遗公众号二维码" 
-               className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-             />
-          </div>
-          <p className="mt-4 text-[10px] font-bold text-stone-400 tracking-[0.3em] uppercase">
-            长按扫码 · 关注公众号
-          </p>
+        {/* 公众号关注引导 */}
+        <div className="mt-8 mb-4 px-6 py-5 bg-amber-50/50 rounded-2xl border border-amber-200/30 text-center">
+          <p className="text-sm font-bold text-stone-700 tracking-wide">微信搜索【命海拾遗】</p>
+          <p className="text-[11px] text-stone-400 mt-2 leading-relaxed">关注公众号，获取体系教程、深度案例与源流考据</p>
         </div>
       </div>
 
