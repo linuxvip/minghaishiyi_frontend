@@ -9,6 +9,8 @@ export default defineConfig({
     'process.env.API_KEY': JSON.stringify(process.env.VITE_API_KEY)
   },
   server: {
+    host: '0.0.0.0',
+    port: 80,
     proxy: {
       // 代理配置：当请求以 /api 开头时，转发到 Python 后端
       '/api': {

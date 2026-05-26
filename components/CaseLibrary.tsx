@@ -299,6 +299,17 @@ const CaseLibrary: React.FC<CaseLibraryProps> = ({ onSelectCase, filters, onFilt
         </div>
       </div>
 
+      {/* 公众号关注引导 — 长期显示 */}
+      <div className="bg-gradient-to-r from-amber-50 via-white to-amber-50 rounded-[2rem] border border-amber-200/60 shadow-sm p-5 flex items-center gap-4 animate-fade-in">
+        <div className="w-14 h-14 bg-white rounded-xl border border-amber-200 flex items-center justify-center flex-shrink-0 overflow-hidden shadow-sm">
+          <img src="/qrcode.jpg" alt="公众号二维码" className="w-full h-full object-cover" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-xs font-bold text-stone-700">长按识别关注公众号</p>
+          <p className="text-[10px] text-stone-400 mt-0.5 leading-relaxed">获取体系教程、深度案例与源流考据</p>
+        </div>
+      </div>
+
       {/* 命例列表区域 */}
       {cases.length > 0 && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

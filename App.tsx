@@ -122,7 +122,7 @@ const App: React.FC = () => {
           <div className="absolute top-[-100px] left-1/2 -translate-x-1/2 w-[600px] h-[600px] bg-stone-200/20 rounded-full blur-[100px] -z-10 pointer-events-none"></div>
           <div className="max-w-4xl mx-auto text-center">
             <h1 className="text-2xl md:text-3xl font-calligraphy tracking-wider animate-fade-in">
-              {activeTab === 'INPUT' ? '命海拾遗' : activeTab === 'LIBRARY' ? '命海拾遗命例库' : activeTab === 'HUANGLI' ? '万年黄历' : '作者信息'}
+              {activeTab === 'INPUT' ? '命海拾遗' : activeTab === 'LIBRARY' ? '命海拾遗命例库' : activeTab === 'HUANGLI' ? '万年黄历' : '命海拾遗'}
             </h1>
             {activeTab === 'INPUT' && (
               <p className="text-stone-400 text-[10px] italic font-serif opacity-50">
