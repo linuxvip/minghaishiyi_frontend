@@ -60,7 +60,7 @@ const AuthorInfo: React.FC = () => {
           />
         </div>
 
-        <p className="text-base font-bold text-stone-800 tracking-wide">长按识别关注公众号</p>
+        <p className="text-base font-bold text-stone-800 tracking-wide">长按二维码识别关注公众号</p>
         <p className="text-xs text-stone-400 mt-2 leading-relaxed">获取体系教程、深度案例与源流考据</p>
       </div>
 

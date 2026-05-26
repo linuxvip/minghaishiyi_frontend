@@ -307,7 +307,7 @@ const CaseLibrary: React.FC<CaseLibraryProps> = React.memo(({ onSelectCase, filt
           <img src="/qrcode.jpg" alt="公众号二维码" className="w-full h-full object-cover" />
         </div>
         <div className="flex-1 min-w-0">
-          <p className="text-xs font-bold text-stone-700">长按识别关注公众号</p>
+          <p className="text-xs font-bold text-stone-700">长按二维码识别关注公众号</p>
           <p className="text-[10px] text-stone-400 mt-0.5 leading-relaxed">获取体系教程、深度案例与源流考据</p>
         </div>
       </div>
