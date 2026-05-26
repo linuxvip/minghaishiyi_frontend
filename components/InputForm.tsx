@@ -3,7 +3,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { CalendarType, Gender } from '../types';
 import { MapPin, Search, ChevronRight, Clock, User, Calendar as CalendarIcon, AlertCircle, Lock, Loader2 } from 'lucide-react';
 import { Solar, Lunar } from 'lunar-typescript';
-import { CHINA_AREA_DATA } from '../utils/areaData';
+import type { AreaNode } from '../utils/areaData';
 import { convertToTrueSolarTime, getMonthStem, getHourStem } from '../utils/baziHelper';
 import { ELEMENT_COLORS, STEM_ELEMENTS, BRANCH_ELEMENTS, HEAVENLY_STEMS, EARTHLY_BRANCHES } from '../constants';
 import { useToast } from './Toast';
@@ -22,8 +22,15 @@ const LocationPickerModal: React.FC<{
   const [cIdx, setCIdx] = useState(0);
   const [dIdx, setDIdx] = useState(0);
   const [searchQuery, setSearchQuery] = useState('');
+  const [areaData, setAreaData] = useState<AreaNode[] | null>(null);
 
-  const provinces = CHINA_AREA_DATA;
+  useEffect(() => {
+    if (isOpen && !areaData) {
+      import('../utils/areaData').then(m => setAreaData(m.CHINA_AREA_DATA));
+    }
+  }, [isOpen, areaData]);
+
+  const provinces = areaData || [];
   const cities = provinces[pIdx]?.c || [];
   const districts = cities[cIdx]?.c || [];
 
@@ -162,7 +169,7 @@ const CharacterBlock: React.FC<{ char: string; isStem: boolean }> = ({ char, isS
   );
 };
 
-const InputForm: React.FC<InputFormProps> = ({ onCalculate }) => {
+const InputForm: React.FC<InputFormProps> = React.memo(({ onCalculate }) => {
   const { showToast } = useToast();
   const [name, setName] = useState('');
   const [gender, setGender] = useState<Gender>(Gender.MALE);
@@ -391,6 +398,6 @@ const InputForm: React.FC<InputFormProps> = ({ onCalculate }) => {
       />
     </div>
   );
-};
+});
 
 export default InputForm;

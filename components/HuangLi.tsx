@@ -4,7 +4,7 @@ import { Solar, Lunar, SolarMonth } from 'lunar-typescript';
 import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, X } from 'lucide-react';
 import { ELEMENT_COLORS, STEM_ELEMENTS, BRANCH_ELEMENTS, EARTHLY_BRANCHES } from '../constants';
 
-const HuangLi: React.FC = () => {
+const HuangLi: React.FC = React.memo(() => {
   // 初始时间设为当前时刻，包含时分秒
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [now, setNow] = useState(new Date());
@@ -341,6 +341,6 @@ const HuangLi: React.FC = () => {
       )}
     </div>
   );
-};
+});
 
 export default HuangLi;

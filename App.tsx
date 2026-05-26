@@ -10,6 +10,7 @@ import { calculateBaZi } from './utils/baziHelper';
 import { BaZiChart, CalendarType, CaseRecord } from './types';
 import { ArrowLeft, LayoutGrid, Library, User, CalendarDays } from 'lucide-react';
 import { useToast } from './components/Toast';
+import ErrorBoundary from './components/ErrorBoundary';
 
 type TabType = 'INPUT' | 'LIBRARY' | 'HUANGLI' | 'ABOUT';
 
@@ -134,7 +135,9 @@ const App: React.FC = () => {
       )}
 
       <main className={`px-4 max-w-4xl mx-auto w-full relative z-10 ${showResult ? 'pt-1' : 'pt-1'}`}>
-        {currentView}
+        <ErrorBoundary>
+          {currentView}
+        </ErrorBoundary>
       </main>
       
       <nav className="fixed bottom-0 left-0 right-0 z-[100] bg-white/75 backdrop-blur-md border-t border-stone-200/60 safe-area-bottom">
@@ -179,7 +182,7 @@ interface NavButtonProps {
 const NavButton: React.FC<NavButtonProps> = ({ active, onClick, icon, label }) => (
   <button
     onClick={onClick}
-    className={`flex flex-col items-center gap-0.5 flex-1 py-1 transition-all duration-200 ${active ? 'text-[#2b2320]' : 'text-stone-350'}`}
+    className={`flex flex-col items-center gap-0.5 flex-1 py-1 transition-all duration-200 ${active ? 'text-[#2b2320]' : 'text-stone-400'}`}
   >
     <span className={`relative transition-all duration-200 ${active ? 'scale-105' : ''}`}>
       {active && (

@@ -1,5 +1,6 @@
 
-export interface AreaNode {
+export type { AreaNode };
+interface AreaNode {
   n: string; // 名称
   l?: number; // 经度
   c?: AreaNode[]; // 子级

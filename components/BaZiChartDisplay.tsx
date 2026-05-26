@@ -39,7 +39,7 @@ const PillarCard: React.FC<{ title: string; data: PillarData; isDayMaster?: bool
   );
 };
 
-const BaZiChartDisplay: React.FC<BaZiChartDisplayProps> = ({ chart }) => {
+const BaZiChartDisplay: React.FC<BaZiChartDisplayProps> = React.memo(({ chart }) => {
   const currentYear = useMemo(() => new Date().getFullYear(), []);
   const luckRef = useRef<HTMLDivElement>(null);
 
@@ -234,6 +234,6 @@ const BaZiChartDisplay: React.FC<BaZiChartDisplayProps> = ({ chart }) => {
       ) : null}
     </div>
   );
-};
+});
 
 export default BaZiChartDisplay;

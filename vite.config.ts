@@ -1,9 +1,12 @@
-
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
+import tailwindcss from '@tailwindcss/vite';
 
 export default defineConfig({
-  plugins: [react()],
+  plugins: [
+    react(),
+    tailwindcss(),
+  ],
   define: {
     // 这里的 VITE_API_KEY 是从你主机的环境变量中读取的
     'process.env.API_KEY': JSON.stringify(process.env.VITE_API_KEY)
@@ -14,7 +17,7 @@ export default defineConfig({
     proxy: {
       // 代理配置：当请求以 /api 开头时，转发到 Python 后端
       '/api': {
-        target: 'http://minghaishiyi.cn:8000',
+        target: process.env.VITE_API_TARGET || 'http://127.0.0.1:7777',
         changeOrigin: true,
         secure: false,
       }

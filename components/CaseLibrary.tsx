@@ -39,12 +39,14 @@ const MiniPillar: React.FC<{ gan: string; zhi: string }> = ({ gan, zhi }) => {
   );
 };
 
-const CaseLibrary: React.FC<CaseLibraryProps> = ({ onSelectCase, filters, onFiltersChange }) => {
+const CaseLibrary: React.FC<CaseLibraryProps> = React.memo(({ onSelectCase, filters, onFiltersChange }) => {
   const [cases, setCases] = useState<CaseRecord[]>([]);
   const [totalCount, setTotalCount] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
   const [isAppending, setIsAppending] = useState(false);
   const [nextUrl, setNextUrl] = useState<string | null>(null);
+  const nextUrlRef = useRef(nextUrl);
+  useEffect(() => { nextUrlRef.current = nextUrl; }, [nextUrl]);
   const [error, setError] = useState<boolean>(false);
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
   const [showBackToTop, setShowBackToTop] = useState(false);
@@ -115,8 +117,8 @@ const CaseLibrary: React.FC<CaseLibraryProps> = ({ onSelectCase, filters, onFilt
       params.append('page_size', '12');
 
       let targetUrl = '';
-      if (isLoadMore && nextUrl) {
-        targetUrl = normalizeUrl(nextUrl);
+      if (isLoadMore && nextUrlRef.current) {
+        targetUrl = normalizeUrl(nextUrlRef.current);
       } else {
         targetUrl = `/api/destiny-cases/?${params.toString()}`;
       }
@@ -159,7 +161,7 @@ const CaseLibrary: React.FC<CaseLibraryProps> = ({ onSelectCase, filters, onFilt
       setIsLoading(false);
       setIsAppending(false);
     }
-  }, [filterGender, filterSource, filterLabel, pillarFilters, nextUrl]);
+  }, [filterGender, filterSource, filterLabel, pillarFilters]);
 
   useEffect(() => {
     fetchCases(false);
@@ -438,6 +440,6 @@ const CaseLibrary: React.FC<CaseLibraryProps> = ({ onSelectCase, filters, onFilt
       )}
     </div>
   );
-};
+});
 
 export default CaseLibrary;
