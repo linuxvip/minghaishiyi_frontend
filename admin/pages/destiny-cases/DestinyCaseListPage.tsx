@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Edit3, Trash2, X, Square, CheckSquare, Download } from 'lucide-react';
+import { Plus, Edit3, Trash2, X, Square, CheckSquare, Download, ChevronDown, ExternalLink } from 'lucide-react';
 import { getDestinyCasesApi, deleteDestinyCaseApi, getDestinyCaseSourcesApi, exportDestinyCasesCsv, DestinyCaseFilters } from '../../api/destiny-cases';
 import { AdminDestinyCase } from '../../types/admin';
 import { ELEMENT_COLORS, STEM_ELEMENTS, BRANCH_ELEMENTS } from '../../../constants';
@@ -56,6 +56,26 @@ const DestinyCaseListPage: React.FC = () => {
   const [exporting, setExporting] = useState(false);
   const [sourceOptions, setSourceOptions] = useState<string[]>([]);
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+  const [expandedIds, setExpandedIds] = useState<Set<number>>(new Set());
+
+  const toggleExpand = useCallback((id: number, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setExpandedIds(prev => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  }, []);
+
+  const parseLabelPairs = (label: string | null): { key: string; value: string }[] => {
+    if (!label) return [];
+    try {
+      const obj = JSON.parse(label);
+      return Object.entries(obj)
+        .filter(([, v]) => v !== null && v !== undefined && v !== '')
+        .map(([k, v]) => ({ key: k, value: String(v) }));
+    } catch { return []; }
+  };
 
   const [filters, setFilters] = useState({
     gender: '',
@@ -89,6 +109,7 @@ const DestinyCaseListPage: React.FC = () => {
   const fetchCases = useCallback(async () => {
     setLoading(true);
     setSelectedIds(new Set());
+    setExpandedIds(new Set());
     try {
       const { data } = await getDestinyCasesApi(buildParams());
       setCases(data.results);
@@ -349,57 +370,84 @@ const DestinyCaseListPage: React.FC = () => {
                 </thead>
                 <tbody>
                   {cases.map((c) => (
-                    <tr key={c.id} className={`border-b border-stone-50 hover:bg-stone-50/30 transition-colors ${selectedIds.has(c.id) ? 'bg-amber-50/40' : ''}`}>
-                      <td className="px-4 py-3">
-                        <button onClick={() => toggleSelect(c.id)} className="text-stone-300 hover:text-amber-500 transition-colors">
-                          {selectedIds.has(c.id) ? (
-                            <CheckSquare size={15} className="text-amber-500" />
-                          ) : (
-                            <Square size={15} />
-                          )}
-                        </button>
-                      </td>
-                      <td className="px-4 py-3 text-stone-400 font-mono text-[11px]">{c.id}</td>
-                      <td className="px-4 py-3 font-bold text-stone-700 max-w-[120px] truncate" title={c.source}>{c.source}</td>
-                      <td className="px-4 py-3">
-                        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold ${c.gender === 1 ? 'bg-sky-50 text-sky-700' : 'bg-rose-50 text-rose-700'}`}>
-                          {c.gender === 1 ? '男' : '女'}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 hidden md:table-cell">
-                        <div className="flex gap-2">
-                          <MiniPillar gan={c.year_ganzhi[0]} zhi={c.year_ganzhi[1]} />
-                          <MiniPillar gan={c.month_ganzhi[0]} zhi={c.month_ganzhi[1]} />
-                          <MiniPillar gan={c.day_ganzhi[0]} zhi={c.day_ganzhi[1]} />
-                          <MiniPillar gan={c.hour_ganzhi[0]} zhi={c.hour_ganzhi[1]} />
-                        </div>
-                      </td>
-                      <td className="px-4 py-3 hidden lg:table-cell">
-                        <div className="flex flex-wrap gap-1 max-w-[180px]">
-                          {parseLabelTags(c.label).slice(0, 3).map((t, i) => (
-                            <span key={i} className="text-[10px] bg-amber-50 text-amber-700 px-1.5 py-0.5 rounded-md whitespace-nowrap">{t}</span>
-                          ))}
-                        </div>
-                      </td>
-                      <td className="px-4 py-3 text-right">
-                        <div className="flex items-center justify-end gap-1">
-                          <button
-                            onClick={() => navigate(`/admin/destiny-cases/${c.id}`)}
-                            className="p-1.5 text-stone-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-colors"
-                            aria-label={`编辑命例 ${c.id}`}
-                          >
-                            <Edit3 size={14} />
+                    <React.Fragment key={c.id}>
+                      <tr
+                        onClick={(e) => toggleExpand(c.id, e)}
+                        className={`border-b border-stone-50 hover:bg-stone-50/30 transition-colors cursor-pointer ${selectedIds.has(c.id) ? 'bg-amber-50/40' : ''}`}
+                      >
+                        <td className="px-4 py-3">
+                          <button onClick={(e) => { e.stopPropagation(); toggleSelect(c.id); }} className="text-stone-300 hover:text-amber-500 transition-colors">
+                            {selectedIds.has(c.id) ? <CheckSquare size={15} className="text-amber-500" /> : <Square size={15} />}
                           </button>
-                          <button
-                            onClick={() => setDeleteTarget(c)}
-                            className="p-1.5 text-stone-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
-                            aria-label={`删除命例 ${c.id}`}
-                          >
-                            <Trash2 size={14} />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
+                        </td>
+                        <td className="px-4 py-3 text-stone-400 font-mono text-[11px]">{c.id}</td>
+                        <td className="px-4 py-3 font-bold text-stone-700 max-w-[120px] truncate" title={c.source}>{c.source}</td>
+                        <td className="px-4 py-3">
+                          <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold ${c.gender === 1 ? 'bg-sky-50 text-sky-700' : 'bg-rose-50 text-rose-700'}`}>
+                            {c.gender === 1 ? '男' : '女'}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 hidden md:table-cell">
+                          <div className="flex gap-2">
+                            <MiniPillar gan={c.year_ganzhi[0]} zhi={c.year_ganzhi[1]} />
+                            <MiniPillar gan={c.month_ganzhi[0]} zhi={c.month_ganzhi[1]} />
+                            <MiniPillar gan={c.day_ganzhi[0]} zhi={c.day_ganzhi[1]} />
+                            <MiniPillar gan={c.hour_ganzhi[0]} zhi={c.hour_ganzhi[1]} />
+                          </div>
+                        </td>
+                        <td className="px-4 py-3 hidden lg:table-cell">
+                          <div className="flex flex-wrap gap-1 max-w-[180px]">
+                            {parseLabelTags(c.label).slice(0, 3).map((t, i) => (
+                              <span key={i} className="text-[10px] bg-amber-50 text-amber-700 px-1.5 py-0.5 rounded-md whitespace-nowrap">{t}</span>
+                            ))}
+                          </div>
+                        </td>
+                        <td className="px-4 py-3 text-right">
+                          <div className="flex items-center justify-end gap-1">
+                            <ChevronDown size={14} className={`text-stone-300 transition-transform ${expandedIds.has(c.id) ? 'rotate-180' : ''}`} />
+                            <button onClick={(e) => { e.stopPropagation(); navigate(`/admin/destiny-cases/${c.id}`); }} className="p-1.5 text-stone-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-colors" aria-label={`编辑命例 ${c.id}`}>
+                              <Edit3 size={14} />
+                            </button>
+                            <button onClick={(e) => { e.stopPropagation(); setDeleteTarget(c); }} className="p-1.5 text-stone-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors" aria-label={`删除命例 ${c.id}`}>
+                              <Trash2 size={14} />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                      {expandedIds.has(c.id) && (
+                        <tr className="bg-stone-50/50">
+                          <td colSpan={7} className="px-6 py-4">
+                            <div className="flex flex-col gap-3 max-w-full">
+                              {(() => {
+                                const pairs = parseLabelPairs(c.label);
+                                return pairs.length > 0 ? (
+                                  <div className="flex flex-wrap gap-x-4 gap-y-1">
+                                    {pairs.map((p, i) => (
+                                      <span key={i} className="text-[10px]">
+                                        <span className="text-stone-400">{p.key}：</span>
+                                        <span className="font-bold text-stone-600">{p.value}</span>
+                                      </span>
+                                    ))}
+                                  </div>
+                                ) : null;
+                              })()}
+                              {c.feedback && (
+                                <div>
+                                  <p className="text-[10px] font-bold text-stone-400 uppercase tracking-widest mb-1">反馈内容</p>
+                                  <p className="text-xs text-stone-600 leading-relaxed whitespace-pre-wrap max-h-48 overflow-y-auto">{c.feedback}</p>
+                                </div>
+                              )}
+                              {c.original_url && (
+                                <a href={c.original_url} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="flex items-center gap-1 text-[10px] font-bold text-amber-600 hover:text-amber-800 transition-colors self-start">
+                                  <ExternalLink size={10} />
+                                  查看原文
+                                </a>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </React.Fragment>
                   ))}
                 </tbody>
               </table>

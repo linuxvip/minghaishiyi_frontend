@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { useAuth } from '../hooks/useAuth';
+import { useConfig } from '../contexts/ConfigContext';
 import { useToast } from '../../components/Toast';
 import { Loader2, AlertCircle } from 'lucide-react';
 
@@ -20,6 +21,7 @@ const getErrorMessage = (err: unknown): string => {
 };
 
 const LoginPage: React.FC = () => {
+  const config = useConfig();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -82,7 +84,7 @@ const LoginPage: React.FC = () => {
             </div>
 
             {/* 品牌名称 */}
-            <h1 className="text-3xl font-calligraphy tracking-[0.15em] text-amber-100/90 mb-2">命海拾遗</h1>
+            <h1 className="text-3xl font-calligraphy tracking-[0.15em] text-amber-100/90 mb-2">{config.site_name}</h1>
 
             {/* 分隔线 */}
             <div className="w-12 h-px bg-amber-700/40 my-3" />
@@ -100,7 +102,7 @@ const LoginPage: React.FC = () => {
             <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center shadow-[0_0_16px_rgba(217,119,6,0.3)] mx-auto mb-3 animate-glow-pulse">
               <span className="text-white text-lg font-bold font-calligraphy">命</span>
             </div>
-            <h1 className="text-xl font-calligraphy tracking-widest text-[#2b2320]">命海拾遗</h1>
+            <h1 className="text-xl font-calligraphy tracking-widest text-[#2b2320]">{config.site_name}</h1>
             <p className="text-[10px] text-stone-400 tracking-widest mt-1">后台管理系统</p>
           </div>
 

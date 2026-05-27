@@ -2,9 +2,11 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { Solar, Lunar, SolarMonth } from 'lunar-typescript';
 import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, X } from 'lucide-react';
+import { useConfig } from '../admin/contexts/ConfigContext';
 import { ELEMENT_COLORS, STEM_ELEMENTS, BRANCH_ELEMENTS, EARTHLY_BRANCHES } from '../constants';
 
 const HuangLi: React.FC = React.memo(() => {
+  const config = useConfig();
   // 初始时间设为当前时刻，包含时分秒
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [now, setNow] = useState(new Date());
@@ -273,7 +275,7 @@ const HuangLi: React.FC = React.memo(() => {
       {/* 底部备注 */}
       <div className="mt-3 md:mt-4 text-center px-4">
         <p className="text-[10px] md:text-[11px] font-bold text-stone-300 tracking-[0.2em] md:tracking-[0.3em] uppercase italic">
-          Almanac Algorithm by MingHaiShiYi
+          {config.footer_text}
         </p>
       </div>
 

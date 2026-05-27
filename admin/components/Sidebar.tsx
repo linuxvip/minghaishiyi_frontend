@@ -1,13 +1,16 @@
 import React, { useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, Users, Library, LogOut, ChevronLeft, ChevronRight } from 'lucide-react';
+import { LayoutDashboard, Users, Library, LogOut, ChevronLeft, ChevronRight, ScrollText, Settings } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
+import { useConfig } from '../contexts/ConfigContext';
 import ConfirmDialog from './ConfirmDialog';
 
 const navItems = [
   { to: '/admin/dashboard', label: '仪表盘', icon: LayoutDashboard },
   { to: '/admin/users', label: '用户管理', icon: Users },
   { to: '/admin/destiny-cases', label: '命例管理', icon: Library },
+  { to: '/admin/audit-logs', label: '操作日志', icon: ScrollText },
+  { to: '/admin/settings', label: '系统设置', icon: Settings },
 ];
 
 interface SidebarProps {
@@ -17,6 +20,7 @@ interface SidebarProps {
 
 const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggle }) => {
   const { user, logout } = useAuth();
+  const config = useConfig();
   const navigate = useNavigate();
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 

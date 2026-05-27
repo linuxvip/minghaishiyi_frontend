@@ -8,6 +8,7 @@ import AuthorInfo from './components/AuthorInfo';
 import HuangLi from './components/HuangLi';
 import { calculateBaZi } from './utils/baziHelper';
 import { BaZiChart, CalendarType, CaseRecord } from './types';
+import { useConfig } from './admin/contexts/ConfigContext';
 import { ArrowLeft, LayoutGrid, Library, User, CalendarDays } from 'lucide-react';
 import { useToast } from './components/Toast';
 import ErrorBoundary from './components/ErrorBoundary';
@@ -15,6 +16,7 @@ import ErrorBoundary from './components/ErrorBoundary';
 type TabType = 'INPUT' | 'LIBRARY' | 'HUANGLI' | 'ABOUT';
 
 const App: React.FC = () => {
+  const config = useConfig();
   const [activeTab, setActiveTab] = useState<TabType>('LIBRARY');
   const [chartData, setChartData] = useState<BaZiChart | null>(null);
   const [showResult, setShowResult] = useState(false);
@@ -87,7 +89,7 @@ const App: React.FC = () => {
                <ArrowLeft size={14} />
                <span className="text-xs font-bold">返回列表</span>
              </button>
-             <div className="text-stone-300 font-calligraphy text-lg opacity-40">命海拾遗</div>
+             <div className="text-stone-300 font-calligraphy text-lg opacity-40">{config.site_name}</div>
            </div>
            <BaZiChartDisplay chart={chartData} />
            <AnalysisResult 
@@ -123,11 +125,11 @@ const App: React.FC = () => {
           <div className="absolute top-[-100px] left-1/2 -translate-x-1/2 w-[600px] h-[600px] bg-stone-200/20 rounded-full blur-[100px] -z-10 pointer-events-none"></div>
           <div className="max-w-4xl mx-auto text-center">
             <h1 className="text-2xl md:text-3xl font-calligraphy tracking-wider animate-fade-in">
-              {activeTab === 'INPUT' ? '命海拾遗' : activeTab === 'LIBRARY' ? '命海拾遗命例库' : activeTab === 'HUANGLI' ? '万年黄历' : '命海拾遗'}
+              {activeTab === 'INPUT' ? config.site_name : activeTab === 'LIBRARY' ? config.site_name + '命例库' : activeTab === 'HUANGLI' ? '万年黄历' : config.site_name}
             </h1>
             {activeTab === 'INPUT' && (
               <p className="text-stone-400 text-[10px] italic font-serif opacity-50">
-                探索八字玄机 · 洞悉人生运势
+                {config.site_subtitle}
               </p>
             )}
           </div>

@@ -68,6 +68,19 @@ export interface CreateGroupPayload {
   permissions?: number[];
 }
 
+export interface AuditLogEntry {
+  id: number;
+  user: number | null;
+  user_name: string;
+  action: 'CREATE' | 'UPDATE' | 'DELETE';
+  model_name: string;
+  object_id: number;
+  changes: string;
+  timestamp: string;
+}
+
+export interface SystemConfigMap { site_name: string; site_subtitle: string; footer_text: string; qrcode_url: string; avatar_url: string; wx_qrcode_url: string; [key: string]: string; }
+
 export interface CreateDestinyCasePayload {
   source: string;
   gender: number;

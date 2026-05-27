@@ -1,6 +1,7 @@
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { CaseRecord, Gender } from '../types';
+import { useConfig } from '../admin/contexts/ConfigContext';
 import { Trash2, Search, Loader2, Database, AlertCircle, ChevronDown, Sparkles, ArrowUp } from 'lucide-react';
 import { ELEMENT_COLORS, STEM_ELEMENTS, BRANCH_ELEMENTS, HEAVENLY_STEMS, EARTHLY_BRANCHES } from '../constants';
 
@@ -40,6 +41,7 @@ const MiniPillar: React.FC<{ gan: string; zhi: string }> = ({ gan, zhi }) => {
 };
 
 const CaseLibrary: React.FC<CaseLibraryProps> = React.memo(({ onSelectCase, filters, onFiltersChange }) => {
+  const config = useConfig();
   const [cases, setCases] = useState<CaseRecord[]>([]);
   const [totalCount, setTotalCount] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
@@ -304,7 +306,7 @@ const CaseLibrary: React.FC<CaseLibraryProps> = React.memo(({ onSelectCase, filt
       {/* 公众号关注引导 — 长期显示 */}
       <div className="bg-gradient-to-r from-amber-50 via-white to-amber-50 rounded-[2rem] border border-amber-200/60 shadow-sm p-5 flex items-center gap-4 animate-fade-in">
         <div className="w-14 h-14 bg-white rounded-xl border border-amber-200 flex items-center justify-center flex-shrink-0 overflow-hidden shadow-sm">
-          <img src="/qrcode.jpg" alt="公众号二维码" className="w-full h-full object-cover" />
+          <img src={config.qrcode_url} alt="公众号二维码" className="w-full h-full object-cover" />
         </div>
         <div className="flex-1 min-w-0">
           <p className="text-xs font-bold text-stone-700">长按二维码识别关注公众号</p>

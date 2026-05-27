@@ -4,6 +4,18 @@ import { ArrowLeft, Loader2, AlertCircle, Plus, X } from 'lucide-react';
 import { getDestinyCaseApi, createDestinyCaseApi, updateDestinyCaseApi } from '../../api/destiny-cases';
 import { getFormErrorMessage } from '../../utils/errors';
 import { useToast } from '../../../components/Toast';
+import { HEAVENLY_STEMS, EARTHLY_BRANCHES } from '../../../constants';
+
+const PILLAR_KEYS = ['year_ganzhi', 'month_ganzhi', 'day_ganzhi', 'hour_ganzhi'] as const;
+
+const validatePillar = (value: string): string | null => {
+  if (!value.trim()) return '不能为空';
+  if (value.length !== 2) return '格式应为"甲子"（2个汉字）';
+  const [gan, zhi] = value;
+  if (!HEAVENLY_STEMS.includes(gan)) return `"${gan}"不是有效天干`;
+  if (!EARTHLY_BRANCHES.includes(zhi)) return `"${zhi}"不是有效地支`;
+  return null;
+};
 
 const LABEL_KEYS = ['出身', '学历', '职业类别', '职业细分', '婚姻状态', '财富层次'];
 
@@ -41,6 +53,7 @@ const DestinyCaseFormPage: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState('');
+  const [pillarErrors, setPillarErrors] = useState<Record<string, string>>({});
 
   const [form, setForm] = useState({
     source: '',
@@ -81,6 +94,16 @@ const DestinyCaseFormPage: React.FC = () => {
     e.preventDefault();
     if (!form.source.trim() || !form.year_ganzhi.trim() || !form.month_ganzhi.trim() || !form.day_ganzhi.trim() || !form.hour_ganzhi.trim()) {
       showToast('请填写必填字段：来源和四柱');
+      return;
+    }
+    const errors: Record<string, string> = {};
+    for (const key of PILLAR_KEYS) {
+      const err = validatePillar((form as Record<string, string>)[key]);
+      if (err) errors[key] = err;
+    }
+    if (Object.keys(errors).length > 0) {
+      setPillarErrors(errors);
+      showToast('请修正四柱格式错误');
       return;
     }
     setSaving(true);
@@ -201,10 +224,17 @@ const DestinyCaseFormPage: React.FC = () => {
                   <input
                     type="text"
                     value={(form as Record<string, unknown>)[key] as string}
-                    onChange={(e) => setForm({ ...form, [key]: e.target.value })}
+                    onChange={(e) => {
+                      setForm({ ...form, [key]: e.target.value });
+                      const err = validatePillar(e.target.value);
+                      setPillarErrors(prev => ({ ...prev, [key]: err || '' }));
+                    }}
                     placeholder="甲子"
-                    className="bg-stone-50 border border-stone-200 rounded-xl py-2.5 px-3 text-sm font-bold text-stone-700 text-center outline-none focus:ring-2 focus:ring-amber-200 placeholder:text-stone-300"
+                    className={`bg-stone-50 border rounded-xl py-2.5 px-3 text-sm font-bold text-stone-700 text-center outline-none focus:ring-2 focus:ring-amber-200 placeholder:text-stone-300 ${pillarErrors[key] ? 'border-rose-300 bg-rose-50/50' : 'border-stone-200'}`}
                   />
+                  {pillarErrors[key] && (
+                    <p className="text-[10px] text-rose-500 font-bold text-center">{pillarErrors[key]}</p>
+                  )}
                 </div>
               ))}
             </div>

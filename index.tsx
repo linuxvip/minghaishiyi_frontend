@@ -3,6 +3,7 @@ import ReactDOM from 'react-dom/client';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import App from './App';
 import { ToastProvider } from './components/Toast';
+import { ConfigProvider } from './admin/contexts/ConfigContext';
 import { AuthProvider } from './admin/contexts/AuthContext';
 import ProtectedRoute from './admin/components/ProtectedRoute';
 import AdminLayout from './admin/components/AdminLayout';
@@ -14,6 +15,8 @@ import GroupListPage from './admin/pages/groups/GroupListPage';
 import GroupFormPage from './admin/pages/groups/GroupFormPage';
 import DestinyCaseListPage from './admin/pages/destiny-cases/DestinyCaseListPage';
 import DestinyCaseFormPage from './admin/pages/destiny-cases/DestinyCaseFormPage';
+import SettingsPage from "./admin/pages/SettingsPage";
+import AuditLogPage from './admin/pages/audit/AuditLogPage';
 
 const rootElement = document.getElementById('root');
 if (!rootElement) {
@@ -25,7 +28,7 @@ root.render(
   <React.StrictMode>
     <BrowserRouter>
       <ToastProvider>
-        <AuthProvider>
+        <ConfigProvider><AuthProvider>
           <Routes>
             <Route path="/admin/login" element={<LoginPage />} />
 
@@ -45,11 +48,13 @@ root.render(
               <Route path="destiny-cases" element={<DestinyCaseListPage />} />
               <Route path="destiny-cases/new" element={<DestinyCaseFormPage />} />
               <Route path="destiny-cases/:id" element={<DestinyCaseFormPage />} />
+              <Route path="settings" element={<SettingsPage />} />
+              <Route path="audit-logs" element={<AuditLogPage />} />
             </Route>
 
             <Route path="/*" element={<App />} />
           </Routes>
-        </AuthProvider>
+        </AuthProvider></ConfigProvider>
       </ToastProvider>
     </BrowserRouter>
   </React.StrictMode>
