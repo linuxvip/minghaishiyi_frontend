@@ -6,14 +6,15 @@ import AnalysisResult from './components/AnalysisResult';
 import CaseLibrary from './components/CaseLibrary';
 import AuthorInfo from './components/AuthorInfo';
 import HuangLi from './components/HuangLi';
+import ArticleList from './components/ArticleList';
 import { calculateBaZi } from './utils/baziHelper';
 import { BaZiChart, CalendarType, CaseRecord } from './types';
 import { useConfig } from './admin/contexts/ConfigContext';
-import { ArrowLeft, LayoutGrid, Library, User, CalendarDays } from 'lucide-react';
+import { ArrowLeft, LayoutGrid, Library, User, CalendarDays, BookOpen } from 'lucide-react';
 import { useToast } from './components/Toast';
 import ErrorBoundary from './components/ErrorBoundary';
 
-type TabType = 'INPUT' | 'LIBRARY' | 'HUANGLI' | 'ABOUT';
+type TabType = 'INPUT' | 'LIBRARY' | 'HUANGLI' | 'ABOUT' | 'ARTICLES';
 
 const App: React.FC = () => {
   const config = useConfig();
@@ -114,6 +115,7 @@ const App: React.FC = () => {
         );
       case 'HUANGLI': return <div className="pb-20 animate-fade-in" key="huangli"><HuangLi /></div>;
       case 'ABOUT': return <div className="pb-20 animate-fade-in" key="about"><AuthorInfo /></div>;
+      case 'ARTICLES': return <div className="pb-20 animate-fade-in" key="articles"><ArticleList /></div>;
       default: return null;
     }
   }, [showResult, chartData, activeTab, handleCalculate, handleSelectCase, handleBack, libraryFilters]);
@@ -125,7 +127,7 @@ const App: React.FC = () => {
           <div className="absolute top-[-100px] left-1/2 -translate-x-1/2 w-[600px] h-[600px] bg-stone-200/20 rounded-full blur-[100px] -z-10 pointer-events-none"></div>
           <div className="max-w-4xl mx-auto text-center">
             <h1 className="text-2xl md:text-3xl font-calligraphy tracking-wider animate-fade-in">
-              {activeTab === 'INPUT' ? config.site_name : activeTab === 'LIBRARY' ? config.site_name + '命例库' : activeTab === 'HUANGLI' ? '万年黄历' : config.site_name}
+              {activeTab === 'INPUT' ? config.site_name : activeTab === 'LIBRARY' ? config.site_name + '命例库' : activeTab === 'HUANGLI' ? '万年黄历' : activeTab === 'ARTICLES' ? '精选文章' : config.site_name}
             </h1>
             {activeTab === 'INPUT' && (
               <p className="text-stone-400 text-[10px] italic font-serif opacity-50">
@@ -151,16 +153,22 @@ const App: React.FC = () => {
             label="排盘"
           />
           <NavButton
+            active={!showResult && activeTab === 'HUANGLI'}
+            onClick={() => { setActiveTab('HUANGLI'); setShowResult(false); }}
+            icon={<CalendarDays size={24} strokeWidth={1.5} />}
+            label="黄历"
+          />
+          <NavButton
             active={!showResult && activeTab === 'LIBRARY'}
             onClick={() => { setActiveTab('LIBRARY'); setShowResult(false); }}
             icon={<Library size={24} strokeWidth={1.5} />}
             label="命例库"
           />
           <NavButton
-            active={!showResult && activeTab === 'HUANGLI'}
-            onClick={() => { setActiveTab('HUANGLI'); setShowResult(false); }}
-            icon={<CalendarDays size={24} strokeWidth={1.5} />}
-            label="黄历"
+            active={!showResult && activeTab === 'ARTICLES'}
+            onClick={() => { setActiveTab('ARTICLES'); setShowResult(false); }}
+            icon={<BookOpen size={24} strokeWidth={1.5} />}
+            label="文章"
           />
           <NavButton
             active={!showResult && activeTab === 'ABOUT'}

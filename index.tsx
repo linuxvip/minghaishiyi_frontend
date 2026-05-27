@@ -15,6 +15,8 @@ import GroupListPage from './admin/pages/groups/GroupListPage';
 import GroupFormPage from './admin/pages/groups/GroupFormPage';
 import DestinyCaseListPage from './admin/pages/destiny-cases/DestinyCaseListPage';
 import DestinyCaseFormPage from './admin/pages/destiny-cases/DestinyCaseFormPage';
+import ArticleListPage from './admin/pages/articles/ArticleListPage';
+import ArticleFormPage from './admin/pages/articles/ArticleFormPage';
 import SettingsPage from "./admin/pages/SettingsPage";
 import AuditLogPage from './admin/pages/audit/AuditLogPage';
 
@@ -48,6 +50,9 @@ root.render(
               <Route path="destiny-cases" element={<DestinyCaseListPage />} />
               <Route path="destiny-cases/new" element={<DestinyCaseFormPage />} />
               <Route path="destiny-cases/:id" element={<DestinyCaseFormPage />} />
+              <Route path="articles" element={<ArticleListPage />} />
+              <Route path="articles/new" element={<ArticleFormPage />} />
+              <Route path="articles/:id" element={<ArticleFormPage />} />
               <Route path="settings" element={<SettingsPage />} />
               <Route path="audit-logs" element={<AuditLogPage />} />
             </Route>

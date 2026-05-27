@@ -81,6 +81,36 @@ export interface AuditLogEntry {
 
 export interface SystemConfigMap { site_name: string; site_subtitle: string; footer_text: string; qrcode_url: string; avatar_url: string; wx_qrcode_url: string; [key: string]: string; }
 
+// ==================== 文章管理 ====================
+
+export interface Article {
+  id: number;
+  title: string;
+  url: string;
+  cover_url: string;
+  summary: string;
+  category: string;
+  source: string;
+  tags: string;
+  sort_order: number;
+  is_published: boolean;
+  published_time: string | null;
+  created_time: string;
+  updated_time: string;
+}
+
+export interface CreateArticlePayload {
+  title: string;
+  url: string;
+  cover_url?: string;
+  summary?: string;
+  category?: string;
+  source?: string;
+  tags?: string;
+  sort_order?: number;
+  is_published?: boolean;
+}
+
 export interface CreateDestinyCasePayload {
   source: string;
   gender: number;
