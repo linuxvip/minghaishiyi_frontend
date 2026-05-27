@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Edit3, Trash2, X, Square, CheckSquare } from 'lucide-react';
-import { getDestinyCasesApi, deleteDestinyCaseApi, getDestinyCaseSourcesApi, DestinyCaseFilters } from '../../api/destiny-cases';
+import { Plus, Edit3, Trash2, X, Square, CheckSquare, Download } from 'lucide-react';
+import { getDestinyCasesApi, deleteDestinyCaseApi, getDestinyCaseSourcesApi, exportDestinyCasesCsv, DestinyCaseFilters } from '../../api/destiny-cases';
 import { AdminDestinyCase } from '../../types/admin';
 import { ELEMENT_COLORS, STEM_ELEMENTS, BRANCH_ELEMENTS } from '../../../constants';
 import Pagination from '../../components/Pagination';
+import Modal from '../../components/Modal';
 import ConfirmDialog from '../../components/ConfirmDialog';
 import EmptyState from '../../components/EmptyState';
 import LoadingSpinner from '../../components/LoadingSpinner';
@@ -51,6 +52,8 @@ const DestinyCaseListPage: React.FC = () => {
   const [deleting, setDeleting] = useState(false);
   const [batchDeleting, setBatchDeleting] = useState(false);
   const [batchConfirmOpen, setBatchConfirmOpen] = useState(false);
+  const [exportConfirmOpen, setExportConfirmOpen] = useState(false);
+  const [exporting, setExporting] = useState(false);
   const [sourceOptions, setSourceOptions] = useState<string[]>([]);
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
 
@@ -153,6 +156,49 @@ const DestinyCaseListPage: React.FC = () => {
     }
   };
 
+  const buildExportParams = useCallback((): Omit<DestinyCaseFilters, 'page' | 'page_size'> => {
+    const p: Omit<DestinyCaseFilters, 'page' | 'page_size'> = {};
+    if (filters.gender) p.gender = filters.gender;
+    if (filters.source) p.source = filters.source;
+    if (filters.label) p.label = filters.label;
+    if (filters.year_ganzhi) p.year_ganzhi = filters.year_ganzhi;
+    if (filters.month_ganzhi) p.month_ganzhi = filters.month_ganzhi;
+    if (filters.day_ganzhi) p.day_ganzhi = filters.day_ganzhi;
+    if (filters.hour_ganzhi) p.hour_ganzhi = filters.hour_ganzhi;
+    if (filters.search) p.search = filters.search;
+    return p;
+  }, [filters]);
+
+  const buildFilterSummary = useCallback((): string[] => {
+    const parts: string[] = [];
+    if (filters.gender) parts.push(`性别：${filters.gender === '1' ? '男' : '女'}`);
+    if (filters.source) parts.push(`来源：${filters.source}`);
+    if (filters.label) parts.push(`标签：${filters.label}`);
+    if (filters.year_ganzhi) parts.push(`年柱：${filters.year_ganzhi}`);
+    if (filters.month_ganzhi) parts.push(`月柱：${filters.month_ganzhi}`);
+    if (filters.day_ganzhi) parts.push(`日柱：${filters.day_ganzhi}`);
+    if (filters.hour_ganzhi) parts.push(`时柱：${filters.hour_ganzhi}`);
+    if (filters.search) parts.push(`搜索：${filters.search}`);
+    return parts;
+  }, [filters]);
+
+  const handleExportClick = () => {
+    setExportConfirmOpen(true);
+  };
+
+  const handleExportConfirm = async () => {
+    setExportConfirmOpen(false);
+    setExporting(true);
+    try {
+      await exportDestinyCasesCsv(buildExportParams());
+      showToast('导出成功');
+    } catch {
+      showToast('导出失败，请重试');
+    } finally {
+      setExporting(false);
+    }
+  };
+
   const resetFilters = () => {
     setFilters({ gender: '', source: '', label: '', year_ganzhi: '', month_ganzhi: '', day_ganzhi: '', hour_ganzhi: '', search: '' });
     pagination.reset();
@@ -162,13 +208,23 @@ const DestinyCaseListPage: React.FC = () => {
     <div className="animate-fade-in">
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-xl font-bold text-stone-800">命例管理</h1>
-        <button
-          onClick={() => navigate('/admin/destiny-cases/new')}
-          className="flex items-center gap-1.5 px-4 py-2 bg-[#2b2320] text-white rounded-xl text-xs font-bold hover:bg-stone-700 transition-colors active:scale-95"
-        >
-          <Plus size={14} />
-          新建命例
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleExportClick}
+            disabled={exporting}
+            className="flex items-center gap-1.5 px-4 py-2 bg-white border border-stone-200 text-stone-600 rounded-xl text-xs font-bold hover:bg-stone-50 hover:border-stone-300 transition-colors active:scale-95 disabled:opacity-60"
+          >
+            <Download size={14} />
+            {exporting ? '导出中...' : '导出CSV'}
+          </button>
+          <button
+            onClick={() => navigate('/admin/destiny-cases/new')}
+            className="flex items-center gap-1.5 px-4 py-2 bg-[#2b2320] text-white rounded-xl text-xs font-bold hover:bg-stone-700 transition-colors active:scale-95"
+          >
+            <Plus size={14} />
+            新建命例
+          </button>
+        </div>
       </div>
 
       <div className="bg-white rounded-2xl border border-stone-200 shadow-sm p-5 mb-4">
@@ -378,6 +434,39 @@ const DestinyCaseListPage: React.FC = () => {
         message={`确定要删除选中的 ${selectedIds.size} 条命例吗？此操作不可撤销。`}
         loading={batchDeleting}
       />
+
+      <Modal isOpen={exportConfirmOpen} onClose={() => setExportConfirmOpen(false)} title="导出命例" size="md">
+        <div className="flex flex-col gap-4">
+          <div className="text-center">
+            <p className="text-sm text-stone-600">
+              当前筛选条件下共 <span className="text-lg font-bold text-amber-600">{pagination.totalCount}</span> 条命例
+            </p>
+            {buildFilterSummary().length > 0 && (
+              <div className="mt-3 flex flex-wrap justify-center gap-1.5">
+                {buildFilterSummary().map((f, i) => (
+                  <span key={i} className="inline-flex px-2 py-0.5 bg-amber-50 text-amber-700 rounded-md text-[10px] font-bold border border-amber-100">{f}</span>
+                ))}
+              </div>
+            )}
+          </div>
+          <div className="bg-stone-50 rounded-xl p-3.5">
+            <p className="text-[10px] font-bold text-stone-400 uppercase tracking-widest mb-2">导出字段（12列）</p>
+            <p className="text-xs text-stone-500 leading-relaxed">
+              ID、来源、性别、年柱、月柱、日柱、时柱、反馈、原文链接、标签、添加时间、修改时间
+            </p>
+          </div>
+          <p className="text-[10px] text-stone-400 text-center">CSV 格式 · UTF-8 编码 · 兼容 Excel / WPS</p>
+          <div className="flex gap-3">
+            <button onClick={() => setExportConfirmOpen(false)} className="flex-1 py-2.5 bg-stone-100 text-stone-600 rounded-xl text-sm font-bold hover:bg-stone-200 transition-colors">
+              取消
+            </button>
+            <button onClick={handleExportConfirm} className="flex-1 py-2.5 bg-amber-500 text-white rounded-xl text-sm font-bold hover:bg-amber-600 transition-colors flex items-center justify-center gap-2">
+              <Download size={14} />
+              确认导出
+            </button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 };
