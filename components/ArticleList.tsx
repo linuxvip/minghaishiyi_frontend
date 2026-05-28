@@ -102,7 +102,7 @@ const ArticleList: React.FC = () => {
 
   return (
     <div className="space-y-3">
-      {articles.map((article) => (
+      {articles.map((article, index) => (
         <div
           key={article.id}
           ref={setCardRef(index)}
