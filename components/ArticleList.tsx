@@ -46,7 +46,7 @@ const ArticleList: React.FC = () => {
 
     timerRef.current = setTimeout(() => {
       setVisibleCount((prev) => prev + 1);
-    }, 420);
+    }, 220);
 
     return () => {
       if (timerRef.current) clearTimeout(timerRef.current);

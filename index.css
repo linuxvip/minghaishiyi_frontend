@@ -73,7 +73,7 @@ body {
 
 .animate-slide-in-right {
   animation-name: slide-in-right;
-  animation-duration: 0.4s;
+  animation-duration: 0.2s;
   animation-timing-function: cubic-bezier(0.22, 0.61, 0.36, 1);
   animation-fill-mode: both;
 }
