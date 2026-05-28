@@ -84,7 +84,32 @@ const AuditLogPage: React.FC = () => {
           <EmptyState message="暂无操作日志" />
         ) : (
           <>
-            <div className="overflow-x-auto">
+            {/* ─── 移动端卡片列表 ─── */}
+            <div className="md:hidden divide-y divide-stone-100">
+              {logs.map((log) => (
+                <div key={log.id} className="px-4 py-3">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold ${ACTION_LABELS[log.action]?.color || 'bg-stone-50 text-stone-500'}`}>
+                      {ACTION_LABELS[log.action]?.label || log.action}
+                    </span>
+                    <span className="text-[10px] text-stone-400 font-mono">
+                      {new Date(log.timestamp).toLocaleString('zh-CN', { month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit' })}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2 text-xs">
+                    <span className="font-bold text-stone-700">{log.user_name || '系统'}</span>
+                    <span className="text-stone-300">·</span>
+                    <span className="text-stone-400 font-mono text-[11px]">{log.model_name}#{log.object_id}</span>
+                  </div>
+                  {log.changes && (
+                    <p className="mt-1 text-[11px] text-stone-500 leading-relaxed line-clamp-2">{formatChanges(log.changes)}</p>
+                  )}
+                </div>
+              ))}
+            </div>
+
+            {/* ─── 桌面端表格 ─── */}
+            <div className="hidden md:block overflow-x-auto">
               <table className="w-full text-xs">
                 <thead>
                   <tr className="border-b border-stone-100 bg-stone-50/50">

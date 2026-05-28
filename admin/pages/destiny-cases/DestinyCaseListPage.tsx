@@ -347,7 +347,79 @@ const DestinyCaseListPage: React.FC = () => {
                 </div>
               </div>
             )}
-            <div className="overflow-x-auto">
+            {/* ─── 移动端卡片列表 ─── */}
+            <div className="md:hidden divide-y divide-stone-100">
+              {cases.map((c) => (
+                <div key={c.id} className={`${selectedIds.has(c.id) ? 'bg-amber-50/40' : ''}`}>
+                  <div className="px-4 py-3" onClick={(e) => toggleExpand(c.id, e)}>
+                    <div className="flex items-start justify-between">
+                      <div className="flex items-center gap-2 flex-1 min-w-0">
+                        <button onClick={(e) => { e.stopPropagation(); toggleSelect(c.id); }} className="text-stone-300 hover:text-amber-500 transition-colors flex-shrink-0">
+                          {selectedIds.has(c.id) ? <CheckSquare size={16} className="text-amber-500" /> : <Square size={16} />}
+                        </button>
+                        <div className="flex gap-1.5 flex-shrink-0">
+                          <MiniPillar gan={c.year_ganzhi[0]} zhi={c.year_ganzhi[1]} />
+                          <MiniPillar gan={c.month_ganzhi[0]} zhi={c.month_ganzhi[1]} />
+                          <MiniPillar gan={c.day_ganzhi[0]} zhi={c.day_ganzhi[1]} />
+                          <MiniPillar gan={c.hour_ganzhi[0]} zhi={c.hour_ganzhi[1]} />
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-1 flex-shrink-0 ml-2">
+                        <ChevronDown size={14} className={`text-stone-300 transition-transform ${expandedIds.has(c.id) ? 'rotate-180' : ''}`} />
+                        <button onClick={(e) => { e.stopPropagation(); navigate(`/admin/destiny-cases/${c.id}`); }} className="p-1.5 text-stone-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-colors">
+                          <Edit3 size={14} />
+                        </button>
+                        <button onClick={(e) => { e.stopPropagation(); setDeleteTarget(c); }} className="p-1.5 text-stone-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors">
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 mt-2 ml-8">
+                      <span className="text-xs font-bold text-stone-700 truncate max-w-[140px]">{c.source}</span>
+                      <span className={`inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-bold ${c.gender === 1 ? 'bg-sky-50 text-sky-700' : 'bg-rose-50 text-rose-700'}`}>
+                        {c.gender === 1 ? '男' : '女'}
+                      </span>
+                      {parseLabelTags(c.label).slice(0, 2).map((t, i) => (
+                        <span key={i} className="text-[10px] bg-amber-50 text-amber-700 px-1.5 py-0.5 rounded-md whitespace-nowrap">{t}</span>
+                      ))}
+                    </div>
+                  </div>
+                  {/* 移动端展开区 */}
+                  {expandedIds.has(c.id) && (
+                    <div className="px-4 pb-4 pt-0 bg-stone-50/50 border-t border-stone-100">
+                      {(() => {
+                        const pairs = parseLabelPairs(c.label);
+                        return pairs.length > 0 ? (
+                          <div className="flex flex-wrap gap-x-3 gap-y-1 mt-2">
+                            {pairs.map((p, i) => (
+                              <span key={i} className="text-[10px]">
+                                <span className="text-stone-400">{p.key}：</span>
+                                <span className="font-bold text-stone-600">{p.value}</span>
+                              </span>
+                            ))}
+                          </div>
+                        ) : null;
+                      })()}
+                      {c.feedback && (
+                        <div className="mt-2">
+                          <p className="text-[10px] font-bold text-stone-400 mb-1">反馈内容</p>
+                          <p className="text-xs text-stone-600 leading-relaxed whitespace-pre-wrap max-h-32 overflow-y-auto">{c.feedback}</p>
+                        </div>
+                      )}
+                      {c.original_url && (
+                        <a href={c.original_url} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-600 mt-2">
+                          <ExternalLink size={10} />
+                          查看原文
+                        </a>
+                      )}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+
+            {/* ─── 桌面端表格 ─── */}
+            <div className="hidden md:block overflow-x-auto">
               <table className="w-full text-xs">
                 <thead>
                   <tr className="border-b border-stone-100 bg-stone-50/50">

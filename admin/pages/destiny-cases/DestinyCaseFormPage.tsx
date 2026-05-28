@@ -172,7 +172,7 @@ const DestinyCaseFormPage: React.FC = () => {
 
       <h1 className="text-xl font-bold text-stone-800 mb-6">{isEdit ? '编辑命例' : '新建命例'}</h1>
 
-      <div className="bg-white rounded-2xl border border-stone-200 shadow-sm p-6">
+      <div className="bg-white rounded-2xl border border-stone-200 shadow-sm p-4 md:p-6">
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           {formError && (
             <div className="flex items-start gap-2 px-3 py-2.5 bg-rose-50 border border-rose-200 rounded-xl text-xs text-rose-700 font-bold">
@@ -212,7 +212,7 @@ const DestinyCaseFormPage: React.FC = () => {
             <p className="text-[10px] font-bold text-stone-400 uppercase tracking-widest mb-3">
               四柱 <span className="text-rose-500">*</span>
             </p>
-            <div className="grid grid-cols-4 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 md:gap-3">
               {[
                 { key: 'year_ganzhi', label: '年柱' },
                 { key: 'month_ganzhi', label: '月柱' },

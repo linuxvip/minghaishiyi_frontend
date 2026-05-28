@@ -88,7 +88,7 @@ const BarChart: React.FC<{
     <div className="flex flex-col gap-2.5">
       {items.map((item, i) => (
         <div key={i} className="flex items-center gap-3">
-          <span className="w-20 text-[10px] font-bold text-stone-500 text-right truncate flex-shrink-0" title={item.label}>
+          <span className="w-14 sm:w-20 text-[10px] font-bold text-stone-500 text-right truncate flex-shrink-0" title={item.label}>
             {item.label}
           </span>
           <div className="flex-1 h-5 bg-stone-100 rounded-full overflow-hidden">
@@ -176,7 +176,7 @@ const DashboardPage: React.FC = () => {
       )}
 
       {/* 总览 */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-2xl mb-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 md:gap-4 max-w-2xl mb-6">
         <StatCard
           icon={<Users size={22} className="text-sky-600" />}
           label="用户总数"
@@ -195,7 +195,7 @@ const DashboardPage: React.FC = () => {
 
       {/* 命例分析 */}
       <h2 className="text-sm font-bold text-stone-600 mb-4">命例分析</h2>
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 md:gap-4">
         {/* 性别分布 */}
         <div className="bg-white rounded-2xl border border-stone-200 shadow-sm p-5">
           <h3 className="text-xs font-bold text-stone-400 uppercase tracking-widest mb-4">性别分布</h3>

@@ -137,7 +137,46 @@ const UserListPage: React.FC = () => {
                 </div>
               </div>
             )}
-            <div className="overflow-x-auto">
+            {/* ─── 移动端卡片列表 ─── */}
+            <div className="md:hidden divide-y divide-stone-100">
+              {users.map((u) => (
+                <div
+                  key={u.id}
+                  className={`px-4 py-3.5 ${selectedIds.has(u.id) ? 'bg-amber-50/40' : ''}`}
+                >
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-center gap-3 flex-1 min-w-0">
+                      <button onClick={() => toggleSelect(u.id)} className="text-stone-300 hover:text-amber-500 transition-colors flex-shrink-0">
+                        {selectedIds.has(u.id) ? <CheckSquare size={16} className="text-amber-500" /> : <Square size={16} />}
+                      </button>
+                      <div className="min-w-0">
+                        <p className="text-sm font-bold text-stone-700 truncate">{u.username}</p>
+                        <p className="text-[11px] text-stone-400 truncate">{u.email || '无邮箱'}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-1 flex-shrink-0 ml-2">
+                      <button onClick={() => navigate(`/admin/users/${u.id}`)} className="p-1.5 text-stone-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-colors">
+                        <Edit3 size={14} />
+                      </button>
+                      <button onClick={() => setDeleteTarget(u)} className="p-1.5 text-stone-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors">
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 mt-2 ml-9">
+                    {u.is_superuser ? (
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-700">超级管理员</span>
+                    ) : u.is_staff ? (
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-sky-50 text-sky-700">管理员</span>
+                    ) : null}
+                    <StatusBadge active={u.is_active} />
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* ─── 桌面端表格 ─── */}
+            <div className="hidden md:block overflow-x-auto">
               <table className="w-full text-xs">
                 <thead>
                   <tr className="border-b border-stone-100 bg-stone-50/50">

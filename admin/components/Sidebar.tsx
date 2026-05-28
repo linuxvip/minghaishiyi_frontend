@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, Users, Library, LogOut, ChevronLeft, ChevronRight, ScrollText, Settings, BookOpen } from 'lucide-react';
+import { LayoutDashboard, Users, Library, LogOut, ChevronLeft, ChevronRight, ScrollText, Settings, BookOpen, X } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { useConfig } from '../contexts/ConfigContext';
 import ConfirmDialog from './ConfirmDialog';
@@ -17,9 +17,11 @@ const navItems = [
 interface SidebarProps {
   collapsed: boolean;
   onToggle: () => void;
+  variant?: 'inline' | 'overlay';
+  onNavClick?: () => void;
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggle }) => {
+const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggle, variant = 'inline', onNavClick }) => {
   const { user, logout } = useAuth();
   const config = useConfig();
   const navigate = useNavigate();
@@ -30,11 +32,13 @@ const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggle }) => {
     navigate('/admin/login', { replace: true });
   };
 
+  const isOverlay = variant === 'overlay';
+
   return (
     <div
       className={`${
         collapsed ? 'w-[68px]' : 'w-60'
-      } h-screen bg-white border-r border-stone-200 flex flex-col flex-shrink-0 transition-all duration-300 relative`}
+      } h-full bg-white border-r border-stone-200 flex flex-col flex-shrink-0 transition-all duration-300 relative`}
     >
       {/* Logo */}
       <div className={`p-5 border-b border-stone-100 ${collapsed ? 'px-3 text-center' : ''}`}>
@@ -43,21 +47,33 @@ const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggle }) => {
             <span className="text-white text-sm font-bold font-calligraphy">命</span>
           </div>
           {!collapsed && (
-            <div className="overflow-hidden">
+            <div className="overflow-hidden flex-1">
               <h2 className="text-lg font-calligraphy tracking-wider text-[#2b2320] whitespace-nowrap">命海拾遗</h2>
               <p className="text-[10px] text-stone-400 tracking-widest">管理后台</p>
             </div>
           )}
+          {/* 移动端关闭按钮 */}
+          {isOverlay && !collapsed && (
+            <button
+              onClick={onToggle}
+              className="p-1.5 -mr-1 text-stone-400 hover:text-stone-600 rounded-lg transition-colors"
+              aria-label="关闭菜单"
+            >
+              <X size={18} />
+            </button>
+          )}
         </div>
       </div>
 
-      {/* Toggle button */}
-      <button
-        onClick={onToggle}
-        className="absolute -right-3 top-20 w-6 h-6 bg-white border border-stone-200 rounded-full flex items-center justify-center text-stone-400 hover:text-stone-600 shadow-sm transition-colors z-10"
-      >
-        {collapsed ? <ChevronRight size={12} /> : <ChevronLeft size={12} />}
-      </button>
+      {/* Toggle button — 仅桌面端显示 */}
+      {!isOverlay && (
+        <button
+          onClick={onToggle}
+          className="absolute -right-3 top-20 w-6 h-6 bg-white border border-stone-200 rounded-full flex items-center justify-center text-stone-400 hover:text-stone-600 shadow-sm transition-colors z-10"
+        >
+          {collapsed ? <ChevronRight size={12} /> : <ChevronLeft size={12} />}
+        </button>
+      )}
 
       {/* Nav */}
       <nav className="flex-1 py-4 flex flex-col gap-1 px-3">
@@ -65,6 +81,7 @@ const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggle }) => {
           <NavLink
             key={to}
             to={to}
+            onClick={onNavClick}
             title={collapsed ? label : undefined}
             className={({ isActive }) =>
               `flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium transition-all ${

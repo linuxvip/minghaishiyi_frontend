@@ -136,7 +136,40 @@ const GroupListPage: React.FC = () => {
                 </div>
               </div>
             )}
-            <div className="overflow-x-auto">
+            {/* ─── 移动端卡片列表 ─── */}
+            <div className="md:hidden divide-y divide-stone-100">
+              {groups.map((g) => (
+                <div
+                  key={g.id}
+                  className={`px-4 py-3.5 ${selectedIds.has(g.id) ? 'bg-amber-50/40' : ''}`}
+                >
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-center gap-3 flex-1 min-w-0">
+                      <button onClick={() => toggleSelect(g.id)} className="text-stone-300 hover:text-amber-500 transition-colors flex-shrink-0">
+                        {selectedIds.has(g.id) ? <CheckSquare size={16} className="text-amber-500" /> : <Square size={16} />}
+                      </button>
+                      <div className="min-w-0">
+                        <p className="text-sm font-bold text-stone-700 truncate">{g.name}</p>
+                        <p className="text-[11px] text-stone-400">
+                          {g.permissions?.length || 0} 权限 · {g.user_set?.length || 0} 成员
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-1 flex-shrink-0 ml-2">
+                      <button onClick={() => navigate(`/admin/groups/${g.id}`)} className="p-1.5 text-stone-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-colors">
+                        <Edit3 size={14} />
+                      </button>
+                      <button onClick={() => setDeleteTarget(g)} className="p-1.5 text-stone-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors">
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* ─── 桌面端表格 ─── */}
+            <div className="hidden md:block overflow-x-auto">
               <table className="w-full text-xs">
                 <thead>
                   <tr className="border-b border-stone-100 bg-stone-50/50">

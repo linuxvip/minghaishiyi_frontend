@@ -122,7 +122,47 @@ const ArticleListPage: React.FC = () => {
           <EmptyState message="暂无文章" />
         ) : (
           <>
-            <div className="overflow-x-auto">
+            {/* ─── 移动端卡片列表 ─── */}
+            <div className="md:hidden divide-y divide-stone-100">
+              {articles.map((a) => (
+                <div
+                  key={a.id}
+                  className="px-4 py-3.5 cursor-pointer hover:bg-stone-50/30 transition-colors"
+                  onClick={() => navigate(`/admin/articles/${a.id}`)}
+                >
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-1.5">
+                        <p className="text-sm font-bold text-stone-700 truncate">{a.title}</p>
+                        {a.url && (
+                          <a href={a.url} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="text-amber-500 flex-shrink-0">
+                            <ExternalLink size={11} />
+                          </a>
+                        )}
+                      </div>
+                      <p className="text-[11px] text-stone-400 mt-0.5 truncate">{a.source || '未标注来源'}</p>
+                    </div>
+                    <div className="flex items-center gap-1 flex-shrink-0 ml-2" onClick={(e) => e.stopPropagation()}>
+                      <button onClick={() => navigate(`/admin/articles/${a.id}`)} className="p-1.5 text-stone-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-colors">
+                        <Edit3 size={14} />
+                      </button>
+                      <button onClick={() => setDeleteTarget(a)} className="p-1.5 text-stone-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors">
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 mt-2">
+                    {a.category && <span className="inline-flex px-2 py-0.5 bg-amber-50 text-amber-700 rounded-md text-[10px] font-bold">{a.category}</span>}
+                    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold ${a.is_published ? 'bg-emerald-50 text-emerald-700' : 'bg-stone-100 text-stone-400'}`}>
+                      {a.is_published ? '显示' : '隐藏'}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* ─── 桌面端表格 ─── */}
+            <div className="hidden md:block overflow-x-auto">
               <table className="w-full text-xs">
                 <thead>
                   <tr className="border-b border-stone-100 bg-stone-50/50">

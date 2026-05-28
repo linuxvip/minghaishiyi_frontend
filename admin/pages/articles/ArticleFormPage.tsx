@@ -136,7 +136,7 @@ const ArticleFormPage: React.FC = () => {
 
       <h1 className="text-xl font-bold text-stone-800 mb-6">{isEdit ? '编辑文章' : '新建文章'}</h1>
 
-      <div className="bg-white rounded-2xl border border-stone-200 shadow-sm p-6">
+      <div className="bg-white rounded-2xl border border-stone-200 shadow-sm p-4 md:p-6">
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           {formError && (
             <div className="flex items-start gap-2 px-3 py-2.5 bg-rose-50 border border-rose-200 rounded-xl text-xs text-rose-700 font-bold">
