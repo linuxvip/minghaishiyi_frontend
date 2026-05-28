@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import axios from 'axios';
 import { ExternalLink, BookOpen } from 'lucide-react';
 
@@ -17,6 +17,8 @@ interface ArticleItem {
 const ArticleList: React.FC = () => {
   const [articles, setArticles] = useState<ArticleItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [visibleCards, setVisibleCards] = useState<Set<number>>(new Set());
+  const observerRef = useRef<IntersectionObserver | null>(null);
 
   useEffect(() => {
     axios
@@ -25,6 +27,41 @@ const ArticleList: React.FC = () => {
       .catch(() => {})
       .finally(() => setLoading(false));
   }, []);
+
+  // IntersectionObserver — stagger card entrance animation
+  useEffect(() => {
+    if (loading || articles.length === 0) return;
+
+    observerRef.current = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            const idx = Number(entry.target.getAttribute('data-card-index'));
+            setVisibleCards((prev) => {
+              if (prev.has(idx)) return prev;
+              const next = new Set(prev);
+              next.add(idx);
+              return next;
+            });
+          }
+        });
+      },
+      { threshold: 0.1, rootMargin: '0px 0px -40px 0px' }
+    );
+
+    return () => {
+      observerRef.current?.disconnect();
+    };
+  }, [loading, articles.length]);
+
+  const setCardRef = useCallback(
+    (index: number) => (el: HTMLDivElement | null) => {
+      if (el && observerRef.current) {
+        observerRef.current.observe(el);
+      }
+    },
+    []
+  );
 
   const parseTags = (tags: string): string[] => {
     if (!tags) return [];
@@ -57,7 +94,7 @@ const ArticleList: React.FC = () => {
   if (articles.length === 0) {
     return (
       <div className="text-center py-20">
-        <BookOpen size={40} className="mx-auto text-stone-200 mb-4" />
+        <BookOpen size={40} className="mx-auto text-stone-200 mb-4 animate-float-bob" />
         <p className="text-sm text-stone-400 font-bold">暂无文章</p>
       </div>
     );
@@ -68,8 +105,15 @@ const ArticleList: React.FC = () => {
       {articles.map((article) => (
         <div
           key={article.id}
+          ref={setCardRef(index)}
+          data-card-index={index}
           onClick={() => handleClick(article.url)}
-          className="group bg-white rounded-2xl border border-stone-100 shadow-sm hover:shadow-md hover:border-amber-200 transition-all duration-200 cursor-pointer p-5"
+          className={`group bg-white rounded-2xl border border-stone-100 shadow-sm hover:shadow-md hover:border-amber-200 hover:-translate-y-0.5 transition-all duration-200 cursor-pointer p-5 ${
+            visibleCards.has(index) ? 'animate-card-enter' : 'opacity-0'
+          }`}
+          style={{
+            animationDelay: visibleCards.has(index) ? `${index * 60}ms` : '0ms',
+          }}
         >
           <div className="flex items-start gap-4">
             {article.cover_url && (
@@ -77,7 +121,7 @@ const ArticleList: React.FC = () => {
                 <img
                   src={article.cover_url}
                   alt={article.title}
-                  className="w-full h-full object-cover"
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                   onError={(e) => {
                     (e.target as HTMLImageElement).style.display = 'none';
                   }}
