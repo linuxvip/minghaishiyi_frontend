@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import { ExternalLink, BookOpen } from 'lucide-react';
 
@@ -17,6 +17,8 @@ interface ArticleItem {
 const ArticleList: React.FC = () => {
   const [articles, setArticles] = useState<ArticleItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [visibleCount, setVisibleCount] = useState(0);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     axios
@@ -25,6 +27,31 @@ const ArticleList: React.FC = () => {
       .catch(() => {})
       .finally(() => setLoading(false));
   }, []);
+
+  // Reset and start sequential reveal when articles load
+  useEffect(() => {
+    if (loading || articles.length === 0) return;
+
+    setVisibleCount(0);
+    timerRef.current = setTimeout(() => setVisibleCount(1), 100);
+
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+    };
+  }, [loading, articles]);
+
+  // Chain: reveal next card after current one
+  useEffect(() => {
+    if (visibleCount <= 0 || visibleCount >= articles.length) return;
+
+    timerRef.current = setTimeout(() => {
+      setVisibleCount((prev) => prev + 1);
+    }, 420);
+
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+    };
+  }, [visibleCount, articles.length]);
 
   const parseTags = (tags: string): string[] => {
     if (!tags) return [];
@@ -64,13 +91,14 @@ const ArticleList: React.FC = () => {
   }
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-3 overflow-x-hidden">
       {articles.map((article, index) => (
         <div
           key={article.id}
           onClick={() => handleClick(article.url)}
-          className="group bg-white rounded-2xl border border-stone-100 shadow-sm hover:shadow-md hover:border-amber-200 hover:-translate-y-0.5 transition-all duration-200 cursor-pointer p-5 animate-card-enter"
-          style={{ animationDelay: `${index * 80}ms` }}
+          className={`group bg-white rounded-2xl border border-stone-100 shadow-sm hover:shadow-md hover:border-amber-200 hover:-translate-y-0.5 transition-all duration-200 cursor-pointer p-5 ${
+            index < visibleCount ? 'animate-slide-in-right' : 'opacity-0'
+          }`}
         >
           <div className="flex items-start gap-4">
             {article.cover_url && (

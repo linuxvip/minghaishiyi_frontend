@@ -60,20 +60,22 @@ body {
   animation: glow-pulse 2.5s ease-in-out infinite;
 }
 
-@keyframes card-enter {
+@keyframes slide-in-right {
   from {
     opacity: 0;
-    transform: translateY(20px);
+    transform: translateX(60px);
   }
   to {
     opacity: 1;
-    transform: translateY(0);
+    transform: translateX(0);
   }
 }
 
-.animate-card-enter {
-  opacity: 0;
-  animation: card-enter 0.45s cubic-bezier(0.22, 0.61, 0.36, 1) forwards;
+.animate-slide-in-right {
+  animation-name: slide-in-right;
+  animation-duration: 0.4s;
+  animation-timing-function: cubic-bezier(0.22, 0.61, 0.36, 1);
+  animation-fill-mode: both;
 }
 
 @keyframes float-bob {
