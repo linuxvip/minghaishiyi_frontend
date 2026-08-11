@@ -676,7 +676,7 @@ const InputForm: React.FC<InputFormProps> = React.memo(({ onCalculate }) => {
     }
     // 计算在 Web Worker 中进行，等待真实结果后关闭 loading
     try {
-      const ok = await onCalculate({ ...input, gender, useTrueSolarTime, longitude: finalLongitude, timezoneOffset: parseFloat(timezoneOffset) || 8, sect });
+      const ok = await onCalculate({ ...input, name: name.trim() || undefined, gender, useTrueSolarTime, longitude: finalLongitude, timezoneOffset: parseFloat(timezoneOffset) || 8, sect });
       // 排盘成功后同步配置到云端
       if (ok && isAuthenticated) {
         updatePreferences(buildPreferences());

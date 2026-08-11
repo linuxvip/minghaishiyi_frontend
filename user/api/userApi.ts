@@ -64,7 +64,7 @@ export const createUserCaseApi = async (payload: {
   subject_name: string;
   notes: string;
   input_snapshot: Record<string, unknown>;
-}): Promise<UserCaseRecord> => {
+}): Promise<UserCaseRecord & { created: boolean }> => {
   const { data } = await userClient.post('/user/cases/', payload);
   return data;
 };

@@ -26,7 +26,7 @@ const SaveCaseBar: React.FC<SaveCaseBarProps> = ({ chart, inputSnapshot }) => {
     if (saving || saved) return;
     setSaving(true);
     try {
-      await createUserCaseApi({
+      const res = await createUserCaseApi({
         gender: chart.gender === Gender.MALE ? 1 : 0,
         year_ganzhi: chart.year.gan + chart.year.zhi,
         month_ganzhi: chart.month.gan + chart.month.zhi,
@@ -37,7 +37,7 @@ const SaveCaseBar: React.FC<SaveCaseBarProps> = ({ chart, inputSnapshot }) => {
         input_snapshot: inputSnapshot,
       });
       setSaved(true);
-      showToast('已保存到我的案例');
+      showToast(res.created ? '已保存到我的案例' : '该命盘已在你的案例中，已更新信息');
     } catch {
       showToast('保存失败，请稍后重试');
     } finally {
