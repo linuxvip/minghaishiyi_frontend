@@ -50,10 +50,10 @@ const SaveCaseBar: React.FC<SaveCaseBarProps> = ({ chart, inputSnapshot }) => {
       <button
         onClick={handleClick}
         disabled={saving || saved}
-        className={`flex-1 flex items-center justify-center gap-1.5 py-3 rounded-full text-sm font-bold shadow-lg active:scale-95 transition-all border ${
+        className={`flex-1 flex items-center justify-center gap-1.5 py-3 rounded-full text-sm font-bold shadow-sm active:scale-95 transition-all border ${
           saved
             ? 'bg-emerald-50 text-emerald-600 border-emerald-200'
-            : 'bg-[#2b2320] text-white border-[#2b2320]'
+            : 'bg-white text-[#b39b7d] border-[#e6d8c3] hover:border-[#b39b7d] hover:bg-amber-50/50'
         } disabled:opacity-70 disabled:cursor-not-allowed`}
       >
         {saving ? (
