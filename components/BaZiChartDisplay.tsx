@@ -61,7 +61,13 @@ const PillarGrid: React.FC<{ cols: ColData[]; showShenSha?: boolean; pro?: boole
     {
       label: '主星',
       cells: c => c.data ? (
-        <span className={`text-[10px] md:text-sm font-bold tracking-widest rounded-full px-2 py-0.5 ${c.isDayMaster ? 'bg-rose-50 text-rose-700 border border-rose-200' : 'text-stone-500'}`}>
+        <span className={`text-[10px] md:text-sm font-bold tracking-widest rounded-full px-2 py-0.5 border ${
+          c.isDayMaster
+            ? isMale
+              ? 'bg-sky-50 text-sky-700 border-sky-200'
+              : 'bg-rose-50 text-rose-700 border-rose-200'
+            : 'text-stone-500 border-transparent'
+        }`}>
           {c.isDayMaster ? (isMale ? '元男' : '元女') : c.data.shiShen}
         </span>
       ) : <span className="text-stone-300">—</span>,
@@ -212,8 +218,6 @@ const ProPanel: React.FC<{ chart: BaZiChart }> = ({ chart }) => {
   const allLiuNian = chart.luckPillars.flatMap(lp => lp.liuNian);
   const currentLiuNian = allLiuNian.find(ln => ln.year === currentYear);
   const currentLuck = chart.luckPillars.find(lp => currentYear >= lp.startYear && currentYear <= lp.endYear);
-  const birthYear = chart.luckPillars[0]?.liuNian?.[0]?.year;
-  const xuSui = birthYear ? currentYear - birthYear + 1 : undefined;
 
   const [selectedLuckIdx, setSelectedLuckIdx] = useState<number | null>(() => {
     const i = chart.luckPillars.findIndex(lp => currentYear >= lp.startYear && currentYear <= lp.endYear);
@@ -221,9 +225,17 @@ const ProPanel: React.FC<{ chart: BaZiChart }> = ({ chart }) => {
   });
   const [selectedYear, setSelectedYear] = useState<number | null>(currentYear);
 
+  const birthYear = chart.luckPillars[0]?.liuNian?.[0]?.year;
+  const xuSui = birthYear && selectedYear != null ? selectedYear - birthYear + 1 : undefined;
+
+  const selectedLiuNian = selectedYear != null ? allLiuNian.find(ln => ln.year === selectedYear) : undefined;
+  const selectedLuck = selectedLuckIdx != null ? chart.luckPillars[selectedLuckIdx] : undefined;
+  const effectiveLiuNian = selectedLiuNian || currentLiuNian;
+  const effectiveLuck = selectedLuck || currentLuck;
+
   const cols: ColData[] = [
-    { label: '流年', sub: currentLiuNian ? `${currentLiuNian.year}年` : `${currentYear}年`, data: currentLiuNian ? flowPillar(currentLiuNian.gan, currentLiuNian.zhi, dm) : null },
-    { label: '大运', sub: currentLuck ? `${currentLuck.startAge}–${endAgeOf(currentLuck)}岁` : '', data: currentLuck ? flowPillar(currentLuck.gan, currentLuck.zhi, dm) : null },
+    { label: '流年', sub: effectiveLiuNian ? `${effectiveLiuNian.year}年` : `${currentYear}年`, data: effectiveLiuNian ? flowPillar(effectiveLiuNian.gan, effectiveLiuNian.zhi, dm) : null },
+    { label: '大运', sub: effectiveLuck ? `${effectiveLuck.startAge}–${endAgeOf(effectiveLuck)}岁` : '', data: effectiveLuck ? flowPillar(effectiveLuck.gan, effectiveLuck.zhi, dm) : null },
     { label: '年柱', data: chart.year, shenSha: shenShaNamesFor(chart.shenSha, 0) },
     { label: '月柱', data: chart.month, shenSha: shenShaNamesFor(chart.shenSha, 1) },
     { label: '日柱', data: chart.day, isDayMaster: true, shenSha: shenShaNamesFor(chart.shenSha, 2) },
