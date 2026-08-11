@@ -32,6 +32,16 @@ export default defineConfig({
     outDir: 'dist',
     assetsDir: 'assets',
     sourcemap: false,
-    emptyOutDir: true
+    emptyOutDir: true,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          // 稳定 vendor 分包：不常变更，配合 nginx immutable 长缓存，发版后用户直接命中缓存
+          'vendor-react': ['react', 'react-dom', 'react-router-dom'],
+          'vendor-ui': ['lucide-react'],
+          'vendor-http': ['axios'],
+        },
+      },
+    },
   }
 });

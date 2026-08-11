@@ -1,26 +1,36 @@
 
-import React, { useState, useCallback, useMemo } from 'react';
-import InputForm from './components/InputForm';
+import React, { useState, useCallback, useMemo, lazy, Suspense } from 'react';
 import BaZiChartDisplay from './components/BaZiChartDisplay';
 import AnalysisResult from './components/AnalysisResult';
 import CaseLibrary from './components/CaseLibrary';
-import AuthorInfo from './components/AuthorInfo';
-import HuangLi from './components/HuangLi';
 import ArticleList from './components/ArticleList';
-import { calculateBaZi } from './utils/baziHelper';
+import ProfilePage from './user/components/ProfilePage';
+import SaveCaseBar from './user/components/SaveCaseBar';
+
+// 按需加载：InputForm 与 HuangLi 静态引用了 lunar-typescript（约 700KB），
+// 拆成独立 chunk，避免打进首屏主包
+const InputForm = lazy(() => import('./components/InputForm'));
+const HuangLi = lazy(() => import('./components/HuangLi'));
+import { calculateBaZiAsync } from './utils/baziAsync';
 import { BaZiChart, CalendarType, CaseRecord } from './types';
 import { useConfig } from './admin/contexts/ConfigContext';
 import { ArrowLeft, LayoutGrid, Library, User, CalendarDays, BookOpen } from 'lucide-react';
 import { useToast } from './components/Toast';
 import ErrorBoundary from './components/ErrorBoundary';
+import { useUserAuth } from './user/contexts/UserAuthContext';
+import AuthModal from './user/components/AuthModal';
 
-type TabType = 'INPUT' | 'LIBRARY' | 'HUANGLI' | 'ABOUT' | 'ARTICLES';
+type TabType = 'INPUT' | 'LIBRARY' | 'HUANGLI' | 'PROFILE' | 'ARTICLES';
 
 const App: React.FC = () => {
   const config = useConfig();
+  const { user, isAuthenticated } = useUserAuth();
   const [activeTab, setActiveTab] = useState<TabType>('LIBRARY');
+  const [authOpen, setAuthOpen] = useState(false);
+  const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
   const [chartData, setChartData] = useState<BaZiChart | null>(null);
   const [showResult, setShowResult] = useState(false);
+  const [lastInput, setLastInput] = useState<Record<string, unknown> | null>(null);
   const { showToast } = useToast();
 
   const [libraryFilters, setLibraryFilters] = useState({
@@ -30,20 +40,11 @@ const App: React.FC = () => {
     pillars: { year: '', month: '', day: '', hour: '' }
   });
 
-  const handleCalculate = useCallback((data: any) => {
+  const handleCalculate = useCallback(async (data: any) => {
      try {
-        const chart = calculateBaZi(
-            data.year,
-            data.month,
-            data.day,
-            data.hour,
-            data.minute,
-            data.gender,
-            data.type,
-            data.directData,
-            data.useTrueSolarTime,
-            data.longitude
-        );
+        const chart = await calculateBaZiAsync(data);
+
+        if (data.name) chart.name = data.name;
 
         if (data.feedback) {
           chart.caseFeedback = data.feedback;
@@ -51,11 +52,14 @@ const App: React.FC = () => {
         }
 
         setChartData(chart);
+        setLastInput(data);
         setShowResult(true);
         window.scrollTo({ top: 0, behavior: 'instant' });
+        return true;
      } catch (e) {
          console.error(e);
          showToast("排盘计算出错，请检查数据。");
+         return false;
      }
   }, [showToast]);
 
@@ -97,6 +101,11 @@ const App: React.FC = () => {
                caseFeedback={chartData.caseFeedback}
                caseSource={chartData.caseSource}
            />
+           {lastInput && (
+             <div className="mt-3">
+               <SaveCaseBar chart={chartData} inputSnapshot={lastInput} />
+             </div>
+           )}
         </div>
       );
     }
@@ -114,17 +123,37 @@ const App: React.FC = () => {
           </div>
         );
       case 'HUANGLI': return <div className="pb-20 animate-fade-in" key="huangli"><HuangLi /></div>;
-      case 'ABOUT': return <div className="pb-20 animate-fade-in" key="about"><AuthorInfo /></div>;
+      case 'PROFILE': return <div className="pb-20 animate-fade-in" key="profile"><ProfilePage onCalculate={handleCalculate} /></div>;
       case 'ARTICLES': return <div className="pb-20 animate-fade-in" key="articles"><ArticleList /></div>;
       default: return null;
     }
-  }, [showResult, chartData, activeTab, handleCalculate, handleSelectCase, handleBack, libraryFilters]);
+  }, [showResult, chartData, activeTab, handleCalculate, handleSelectCase, handleBack, libraryFilters, lastInput, config.site_name]);
 
   return (
     <div className="min-h-screen bg-[#fbf9f4] text-[#2b2320] selection:bg-rose-900/10 selection:text-rose-900 overflow-x-hidden">
       {!showResult && (
         <header className={`px-4 relative transition-all ${activeTab === 'INPUT' ? 'pt-4 pb-1' : 'pt-5 pb-3'}`}>
           <div className="absolute top-[-100px] left-1/2 -translate-x-1/2 w-[600px] h-[600px] bg-stone-200/20 rounded-full blur-[100px] -z-10 pointer-events-none"></div>
+          <div className="absolute top-2.5 right-3 md:right-6 z-20">
+            {isAuthenticated ? (
+              <button
+                onClick={() => { setActiveTab('PROFILE'); setShowResult(false); }}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/85 backdrop-blur border border-stone-200 text-xs font-bold text-[#2b2320] shadow-sm hover:border-[#b39b7d] transition-all max-w-[140px]"
+                title="进入我的"
+              >
+                <User size={13} strokeWidth={2.2} className="text-[#b39b7d] shrink-0" />
+                <span className="truncate">{user?.nickname || user?.username}</span>
+              </button>
+            ) : (
+              <button
+                onClick={() => { setAuthMode('login'); setAuthOpen(true); }}
+                className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-white/85 backdrop-blur border border-stone-200 text-xs font-bold text-[#2b2320] shadow-sm hover:border-[#b39b7d] hover:text-[#b39b7d] transition-all active:scale-95"
+              >
+                <User size={13} strokeWidth={2.2} className="text-[#b39b7d]" />
+                登录
+              </button>
+            )}
+          </div>
           <div className="max-w-4xl mx-auto text-center">
             <h1 className="text-2xl md:text-3xl font-calligraphy tracking-wider animate-fade-in">
               {activeTab === 'INPUT' ? config.site_name : activeTab === 'LIBRARY' ? config.site_name + '命例库' : activeTab === 'HUANGLI' ? '万年黄历' : activeTab === 'ARTICLES' ? '精选文章' : config.site_name}
@@ -140,7 +169,14 @@ const App: React.FC = () => {
 
       <main className={`px-4 max-w-4xl mx-auto w-full relative z-10 ${showResult ? 'pt-1' : 'pt-1'}`}>
         <ErrorBoundary>
-          {currentView}
+          <Suspense fallback={
+            <div className="flex flex-col items-center justify-center py-32 gap-3 animate-pulse">
+              <div className="w-10 h-10 rounded-full border-4 border-stone-200 border-t-[#2b2320] animate-spin"></div>
+              <span className="text-xs font-bold text-stone-400 tracking-widest">加载中...</span>
+            </div>
+          }>
+            {currentView}
+          </Suspense>
         </ErrorBoundary>
       </main>
       
@@ -171,13 +207,19 @@ const App: React.FC = () => {
             label="文章"
           />
           <NavButton
-            active={!showResult && activeTab === 'ABOUT'}
-            onClick={() => { setActiveTab('ABOUT'); setShowResult(false); }}
+            active={!showResult && activeTab === 'PROFILE'}
+            onClick={() => { setActiveTab('PROFILE'); setShowResult(false); }}
             icon={<User size={24} strokeWidth={1.5} />}
-            label="作者"
+            label="我的"
           />
         </div>
       </nav>
+
+      <AuthModal
+        isOpen={authOpen}
+        onClose={() => setAuthOpen(false)}
+        initialMode={authMode}
+      />
     </div>
   );
 };

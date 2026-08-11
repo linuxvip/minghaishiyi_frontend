@@ -26,7 +26,7 @@ const SettingsPage: React.FC = () => {
 
   useEffect(() => { getSystemConfigsApi().then(({ data }) => setConfigs((prev) => ({ ...prev, ...data }))).catch(() => showToast('加载失败')).finally(() => setLoading(false)); }, []);
 
-  const handleUpload = async (file: File, field: keyof SystemConfigMap): Promise<void> => { setUploading(field); const fd = new FormData(); fd.append('file', file); try { const tok = getAccessToken(); const res = await fetch('/admin-api/upload/', { method: 'POST', body: fd, headers: tok ? { Authorization: 'Bearer ' + tok } : {} }); if (!res.ok) { showToast('上传失败'); return; } const { url } = await res.json(); setConfigs((prev) => ({ ...prev, [field]: url })); showToast('上传成功'); } catch { showToast('上传失败'); } finally { setUploading(null); } };
+  const handleUpload = async (file: File, field: keyof SystemConfigMap): Promise<void> => { setUploading(String(field)); const fd = new FormData(); fd.append('file', file); try { const tok = getAccessToken(); const res = await fetch('/admin-api/upload/', { method: 'POST', body: fd, headers: tok ? { Authorization: 'Bearer ' + tok } : {} }); if (!res.ok) { showToast('上传失败'); return; } const { url } = await res.json(); setConfigs((prev) => ({ ...prev, [field]: url })); showToast('上传成功'); } catch { showToast('上传失败'); } finally { setUploading(null); } };
 
   const handleSave = async () => { setSaving(true); setError(''); try { await updateSystemConfigsApi(configs); showToast('已保存'); } catch { setError('保存失败'); } finally { setSaving(false); } };
   if (loading) return <div className="flex items-center justify-center py-20"><Loader2 className="animate-spin text-stone-300" size={28} /></div>;

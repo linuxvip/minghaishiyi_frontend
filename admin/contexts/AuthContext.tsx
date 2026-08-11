@@ -74,7 +74,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
       try {
         const { data } = await getMeApi();
-        setState({ user: data as unknown as AdminUser, isAuthenticated: true, isLoading: false });
+        const u = data as unknown as AdminUser;
+        if (!u.is_superuser) {
+          clearTokens();
+          setState({ user: null, isAuthenticated: false, isLoading: false });
+          return;
+        }
+        setState({ user: u, isAuthenticated: true, isLoading: false });
       } catch {
         clearTokens();
         setState({ user: null, isAuthenticated: false, isLoading: false });
@@ -85,8 +91,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const login = useCallback(async (username: string, password: string) => {
     await loginApi({ username, password });
-    const { data } = await getMeApi();
-    setState({ user: data as unknown as AdminUser, isAuthenticated: true, isLoading: false });
+    try {
+      const { data } = await getMeApi();
+      const u = data as unknown as AdminUser;
+      if (!u.is_superuser) {
+        throw new Error('无后台管理权限');
+      }
+      setState({ user: u, isAuthenticated: true, isLoading: false });
+    } catch (e) {
+      clearTokens();
+      setState({ user: null, isAuthenticated: false, isLoading: false });
+      throw e;
+    }
   }, []);
 
   const logout = useCallback(async () => {

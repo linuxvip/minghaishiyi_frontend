@@ -98,7 +98,7 @@ const DestinyCaseFormPage: React.FC = () => {
     }
     const errors: Record<string, string> = {};
     for (const key of PILLAR_KEYS) {
-      const err = validatePillar((form as Record<string, string>)[key]);
+      const err = validatePillar((form as unknown as Record<string, string>)[key]);
       if (err) errors[key] = err;
     }
     if (Object.keys(errors).length > 0) {

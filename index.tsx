@@ -1,24 +1,27 @@
-import React from 'react';
+import React, { lazy, Suspense } from 'react';
 import ReactDOM from 'react-dom/client';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import App from './App';
 import { ToastProvider } from './components/Toast';
 import { ConfigProvider } from './admin/contexts/ConfigContext';
 import { AuthProvider } from './admin/contexts/AuthContext';
-import ProtectedRoute from './admin/components/ProtectedRoute';
-import AdminLayout from './admin/components/AdminLayout';
-import LoginPage from './admin/pages/LoginPage';
-import DashboardPage from './admin/pages/DashboardPage';
-import UserListPage from './admin/pages/users/UserListPage';
-import UserFormPage from './admin/pages/users/UserFormPage';
-import GroupListPage from './admin/pages/groups/GroupListPage';
-import GroupFormPage from './admin/pages/groups/GroupFormPage';
-import DestinyCaseListPage from './admin/pages/destiny-cases/DestinyCaseListPage';
-import DestinyCaseFormPage from './admin/pages/destiny-cases/DestinyCaseFormPage';
-import ArticleListPage from './admin/pages/articles/ArticleListPage';
-import ArticleFormPage from './admin/pages/articles/ArticleFormPage';
-import SettingsPage from "./admin/pages/SettingsPage";
-import AuditLogPage from './admin/pages/audit/AuditLogPage';
+import { UserAuthProvider } from './user/contexts/UserAuthContext';
+
+// 后台管理页按需加载：普通访客永不加载这些 chunk
+const ProtectedRoute = lazy(() => import('./admin/components/ProtectedRoute'));
+const AdminLayout = lazy(() => import('./admin/components/AdminLayout'));
+const LoginPage = lazy(() => import('./admin/pages/LoginPage'));
+const DashboardPage = lazy(() => import('./admin/pages/DashboardPage'));
+const UserListPage = lazy(() => import('./admin/pages/users/UserListPage'));
+const UserFormPage = lazy(() => import('./admin/pages/users/UserFormPage'));
+const GroupListPage = lazy(() => import('./admin/pages/groups/GroupListPage'));
+const GroupFormPage = lazy(() => import('./admin/pages/groups/GroupFormPage'));
+const DestinyCaseListPage = lazy(() => import('./admin/pages/destiny-cases/DestinyCaseListPage'));
+const DestinyCaseFormPage = lazy(() => import('./admin/pages/destiny-cases/DestinyCaseFormPage'));
+const ArticleListPage = lazy(() => import('./admin/pages/articles/ArticleListPage'));
+const ArticleFormPage = lazy(() => import('./admin/pages/articles/ArticleFormPage'));
+const SettingsPage = lazy(() => import('./admin/pages/SettingsPage'));
+const AuditLogPage = lazy(() => import('./admin/pages/audit/AuditLogPage'));
 
 const rootElement = document.getElementById('root');
 if (!rootElement) {
@@ -30,8 +33,14 @@ root.render(
   <React.StrictMode>
     <BrowserRouter>
       <ToastProvider>
-        <ConfigProvider><AuthProvider>
-          <Routes>
+        <ConfigProvider><AuthProvider><UserAuthProvider>
+          <Suspense fallback={
+            <div className="min-h-screen bg-[#fbf9f4] flex flex-col items-center justify-center gap-3">
+              <div className="w-10 h-10 rounded-full border-4 border-stone-200 border-t-[#2b2320] animate-spin"></div>
+              <span className="text-xs font-bold text-stone-400 tracking-widest">加载中...</span>
+            </div>
+          }>
+            <Routes>
             <Route path="/admin/login" element={<LoginPage />} />
 
             <Route path="/admin" element={
@@ -59,7 +68,8 @@ root.render(
 
             <Route path="/*" element={<App />} />
           </Routes>
-        </AuthProvider></ConfigProvider>
+          </Suspense>
+        </UserAuthProvider></AuthProvider></ConfigProvider>
       </ToastProvider>
     </BrowserRouter>
   </React.StrictMode>

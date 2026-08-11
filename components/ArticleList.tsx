@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import { ExternalLink, BookOpen } from 'lucide-react';
+import FavoriteButton from '../user/components/FavoriteButton';
 
 interface ArticleItem {
   id: number;
@@ -118,7 +119,10 @@ const ArticleList: React.FC = () => {
                 <h3 className="text-base font-bold text-stone-800 group-hover:text-amber-700 transition-colors line-clamp-2">
                   {article.title}
                 </h3>
-                <ExternalLink size={14} className="flex-shrink-0 mt-1 text-stone-300 group-hover:text-amber-500 transition-colors" />
+                <div className="flex items-center gap-1 flex-shrink-0">
+                  <FavoriteButton objectType="article" objectId={article.id} size={15} className="p-1" />
+                  <ExternalLink size={14} className="mt-0.5 text-stone-300 group-hover:text-amber-500 transition-colors" />
+                </div>
               </div>
 
               {article.summary && (

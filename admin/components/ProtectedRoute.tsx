@@ -4,13 +4,13 @@ import { useAuth } from '../hooks/useAuth';
 import LoadingSpinner from './LoadingSpinner';
 
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading, user } = useAuth();
 
   if (isLoading) {
     return <LoadingSpinner />;
   }
 
-  if (!isAuthenticated) {
+  if (!isAuthenticated || !user?.is_superuser) {
     return <Navigate to="/admin/login" replace />;
   }
 

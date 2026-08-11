@@ -2,6 +2,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { CaseRecord, Gender } from '../types';
 import { useConfig } from '../admin/contexts/ConfigContext';
+import FavoriteButton from '../user/components/FavoriteButton';
 import { Trash2, Search, Loader2, Database, AlertCircle, ChevronDown, Sparkles, ArrowUp } from 'lucide-react';
 import { ELEMENT_COLORS, STEM_ELEMENTS, BRANCH_ELEMENTS, HEAVENLY_STEMS, EARTHLY_BRANCHES } from '../constants';
 
@@ -323,24 +324,30 @@ const CaseLibrary: React.FC<CaseLibraryProps> = React.memo(({ onSelectCase, filt
               onClick={() => onSelectCase(c)}
               className="bg-white p-5 rounded-3xl border border-stone-200 hover:border-amber-300 hover:shadow-md transition-all cursor-pointer group flex flex-col gap-4"
             >
-               <div className="flex items-start justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-sm font-bold ${c.gender === Gender.MALE ? 'bg-sky-50 text-sky-700' : 'bg-rose-50 text-rose-700'}`}>
-                      {c.gender === Gender.MALE ? '乾' : '坤'}
-                    </div>
-                    <div className="flex flex-col">
-                      <span className="text-xs font-bold text-stone-800">{c.source}</span>
-                      <div className="flex flex-wrap gap-1 mt-0.5">
-                        {c.tags.slice(0, 6).map((t, idx) => (
-                          <span key={idx} className="text-[10px] bg-amber-50 text-amber-700 px-1.5 py-0.5 rounded-md whitespace-nowrap">{t}</span>
-                        ))}
-                        {c.tags.length > 6 && (
-                          <span className="text-[10px] text-stone-400 px-1 py-0.5">+{c.tags.length - 6}</span>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-               </div>
+                <div className="flex items-start justify-between">
+                   <div className="flex items-center gap-3">
+                     <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-sm font-bold ${c.gender === Gender.MALE ? 'bg-sky-50 text-sky-700' : 'bg-rose-50 text-rose-700'}`}>
+                       {c.gender === Gender.MALE ? '乾' : '坤'}
+                     </div>
+                     <div className="flex flex-col">
+                       <span className="text-xs font-bold text-stone-800">{c.source}</span>
+                       <div className="flex flex-wrap gap-1 mt-0.5">
+                         {c.tags.slice(0, 6).map((t, idx) => (
+                           <span key={idx} className="text-[10px] bg-amber-50 text-amber-700 px-1.5 py-0.5 rounded-md whitespace-nowrap">{t}</span>
+                         ))}
+                         {c.tags.length > 6 && (
+                           <span className="text-[10px] text-stone-400 px-1 py-0.5">+{c.tags.length - 6}</span>
+                         )}
+                       </div>
+                     </div>
+                   </div>
+                   <FavoriteButton
+                     objectType="destiny_case"
+                     objectId={parseInt(c.id, 10)}
+                     size={18}
+                     className="p-1.5 -mt-1 -mr-1"
+                   />
+                </div>
 
                <div className="flex justify-between bg-stone-50/50 p-3 rounded-2xl border border-stone-100">
                   <MiniPillar gan={c.yearGZ[0]} zhi={c.yearGZ[1]} />
