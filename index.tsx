@@ -20,6 +20,8 @@ const DestinyCaseListPage = lazy(() => import('./admin/pages/destiny-cases/Desti
 const DestinyCaseFormPage = lazy(() => import('./admin/pages/destiny-cases/DestinyCaseFormPage'));
 const ArticleListPage = lazy(() => import('./admin/pages/articles/ArticleListPage'));
 const ArticleFormPage = lazy(() => import('./admin/pages/articles/ArticleFormPage'));
+const ProcessingTaskListPage = lazy(() => import('./admin/pages/processing-tasks/ListPage'));
+const ProcessingTaskDetailPage = lazy(() => import('./admin/pages/processing-tasks/DetailPage'));
 const SettingsPage = lazy(() => import('./admin/pages/SettingsPage'));
 const AuditLogPage = lazy(() => import('./admin/pages/audit/AuditLogPage'));
 
@@ -62,6 +64,8 @@ root.render(
               <Route path="articles" element={<ArticleListPage />} />
               <Route path="articles/new" element={<ArticleFormPage />} />
               <Route path="articles/:id" element={<ArticleFormPage />} />
+              <Route path="processing-tasks" element={<ProcessingTaskListPage />} />
+              <Route path="processing-tasks/:id" element={<ProcessingTaskDetailPage />} />
               <Route path="settings" element={<SettingsPage />} />
               <Route path="audit-logs" element={<AuditLogPage />} />
             </Route>

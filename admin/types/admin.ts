@@ -79,7 +79,7 @@ export interface AuditLogEntry {
   timestamp: string;
 }
 
-export interface SystemConfigMap { site_name: string; site_subtitle: string; footer_text: string; qrcode_url: string; avatar_url: string; wx_qrcode_url: string; [key: string]: string; }
+export interface SystemConfigMap { site_name: string; site_subtitle: string; footer_text: string; qrcode_url: string; avatar_url: string; wx_qrcode_url: string; deepseek_api_key: string; deepseek_api_url: string; [key: string]: string; }
 
 // ==================== 文章管理 ====================
 
@@ -121,4 +121,30 @@ export interface CreateDestinyCasePayload {
   feedback?: string;
   original_url?: string;
   label?: string;
+}
+
+export interface ProcessingTask {
+  id: number;
+  url: string;
+  source_name: string;
+  status: 'pending' | 'processing' | 'done' | 'failed';
+  log: string;
+  cases_created: number;
+  error_message: string;
+  created_at: string;
+  updated_at: string;
+  status_display: string;
+}
+
+export interface CreateProcessingTaskPayload {
+  url: string;
+  source_name: string;
+}
+
+export interface ProcessingTaskFilters {
+  page?: number;
+  page_size?: number;
+  search?: string;
+  status?: string;
+  ordering?: string;
 }

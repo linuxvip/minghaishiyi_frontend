@@ -5,7 +5,7 @@ import { SystemConfigMap } from '../types/admin';
 import { getAccessToken } from '../api/client';
 import { useToast } from '../../components/Toast';
 
-interface FieldMeta { key: keyof SystemConfigMap; label: string; placeholder: string; group: string; upload?: boolean; }
+interface FieldMeta { key: keyof SystemConfigMap; label: string; placeholder: string; group: string; upload?: boolean; password?: boolean; }
 
 const FIELDS: FieldMeta[] = [
   { key: 'site_name', label: '网站名称', placeholder: '命海拾遗', group: '品牌信息' },
@@ -14,6 +14,8 @@ const FIELDS: FieldMeta[] = [
   { key: 'avatar_url', label: '作者头像', placeholder: '/avatar.jpg', group: '媒体资源', upload: true },
   { key: 'qrcode_url', label: '公众号二维码', placeholder: '/qrcode.jpg', group: '媒体资源', upload: true },
   { key: 'wx_qrcode_url', label: '个人微信二维码', placeholder: '/wx_qrcode.jpg', group: '媒体资源', upload: true },
+  { key: 'deepseek_api_key', label: 'API Key', placeholder: 'sk-...', group: 'AI 配置', password: true },
+  { key: 'deepseek_api_url', label: 'API 地址', placeholder: 'https://api.deepseek.com', group: 'AI 配置' },
 ];
 const SettingsPage: React.FC = () => {
   const { showToast } = useToast();
@@ -21,7 +23,7 @@ const SettingsPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState<string | null>(null);
-  const [configs, setConfigs] = useState<SystemConfigMap>({ site_name: '', site_subtitle: '', footer_text: '', qrcode_url: '', avatar_url: '', wx_qrcode_url: '' });
+  const [configs, setConfigs] = useState<SystemConfigMap>({ site_name: '', site_subtitle: '', footer_text: '', qrcode_url: '', avatar_url: '', wx_qrcode_url: '', deepseek_api_key: '', deepseek_api_url: '' });
   const [error, setError] = useState('');
 
   useEffect(() => { getSystemConfigsApi().then(({ data }) => setConfigs((prev) => ({ ...prev, ...data }))).catch(() => showToast('加载失败')).finally(() => setLoading(false)); }, []);
@@ -31,7 +33,7 @@ const SettingsPage: React.FC = () => {
   const handleSave = async () => { setSaving(true); setError(''); try { await updateSystemConfigsApi(configs); showToast('已保存'); } catch { setError('保存失败'); } finally { setSaving(false); } };
   if (loading) return <div className="flex items-center justify-center py-20"><Loader2 className="animate-spin text-stone-300" size={28} /></div>;
 
-  const groups = ['品牌信息', '媒体资源'];
+  const groups = ['品牌信息', '媒体资源', 'AI 配置'];
   return (
     <div className="animate-fade-in max-w-2xl">
       <h1 className="text-xl font-bold text-stone-800 mb-6">系统设置</h1>
@@ -53,7 +55,7 @@ const SettingsPage: React.FC = () => {
                     {configs[field.key] && (<div className="w-10 h-10 bg-stone-50 rounded-lg border border-stone-200 overflow-hidden flex-shrink-0"><img src={configs[field.key]} alt="" className="w-full h-full object-cover" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} /></div>)}
                   </div>
                 )}
-                <input type="text" value={configs[field.key] || ''} onChange={(e) => setConfigs((prev) => ({ ...prev, [field.key]: e.target.value }))} placeholder={field.placeholder} className="bg-stone-50 border border-stone-200 rounded-xl py-2.5 px-4 text-sm font-bold text-stone-700 outline-none focus:ring-2 focus:ring-amber-200 placeholder:text-stone-300" />
+                <input type={field.password ? "password" : "text"} value={configs[field.key] || ''} onChange={(e) => setConfigs((prev) => ({ ...prev, [field.key]: e.target.value }))} placeholder={field.placeholder} className="bg-stone-50 border border-stone-200 rounded-xl py-2.5 px-4 text-sm font-bold text-stone-700 outline-none focus:ring-2 focus:ring-amber-200 placeholder:text-stone-300" />
               </div>
             ))}
           </div>
