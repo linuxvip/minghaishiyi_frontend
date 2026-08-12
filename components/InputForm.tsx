@@ -2,10 +2,11 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { CalendarType, Gender } from '../types';
-import { MapPin, Search, ChevronRight, User, Calendar as CalendarIcon, Lock, Loader2, SlidersHorizontal } from 'lucide-react';
+import { MapPin, Search, ChevronRight, User, Calendar as CalendarIcon, Loader2, SlidersHorizontal } from 'lucide-react';
 import { Solar, Lunar, LunarYear, LunarMonth } from 'lunar-typescript';
 import type { AreaNode } from '../utils/areaData';
 import { convertToTrueSolarTime, getMonthStem, getHourStem } from '../utils/baziHelper';
+import { findAllSolarDatesFromBaZi } from '../utils/baziCalc';
 import { ELEMENT_COLORS, STEM_ELEMENTS, BRANCH_ELEMENTS, HEAVENLY_STEMS, EARTHLY_BRANCHES } from '../constants';
 import { useToast } from './Toast';
 import { useUserAuth } from '../user/contexts/UserAuthContext';
@@ -20,6 +21,7 @@ interface LunarDT { year: number; month: number; leap: boolean; day: number; hou
 interface DirectDT {
   yearGan: string; yearZhi: string; monthGan: string; monthZhi: string;
   dayGan: string; dayZhi: string; hourGan: string; hourZhi: string;
+  matchedSolar?: { year: number; month: number; day: number; hour: number; minute: number };
 }
 
 const pad2 = (n: number): string => String(n).padStart(2, '0');
@@ -272,8 +274,47 @@ const WheelColumn: React.FC<{
   );
 };
 
-const DIRECT_STEPS = ['yearGan', 'yearZhi', 'monthZhi', 'dayGan', 'dayZhi', 'hourZhi'] as const;
+const DIRECT_STEPS = ['yearGan', 'yearZhi', 'month', 'dayGan', 'dayZhi', 'hour'] as const;
+type DirectStep = (typeof DIRECT_STEPS)[number];
 type DirectKey = 'yearGan' | 'yearZhi' | 'monthGan' | 'monthZhi' | 'dayGan' | 'dayZhi' | 'hourGan' | 'hourZhi';
+type PillarKey = 'year' | 'month' | 'day' | 'hour';
+
+const STEP_PILLAR: Record<DirectStep, PillarKey> = {
+  yearGan: 'year', yearZhi: 'year', month: 'month',
+  dayGan: 'day', dayZhi: 'day', hour: 'hour',
+};
+
+const YANG_BRANCHES = ['子', '寅', '辰', '午', '申', '戌'];
+const YIN_BRANCHES = ['丑', '卯', '巳', '未', '酉', '亥'];
+
+const isYangStem = (s: string): boolean => HEAVENLY_STEMS.indexOf(s) % 2 === 0;
+const branchesForStem = (s: string): string[] => (isYangStem(s) ? YANG_BRANCHES : YIN_BRANCHES);
+
+// 五虎遁：以年干推寅月天干为起点，地支寅→丑顺排，天干逐月+1
+const monthPillarList = (yearGan: string): { gan: string; zhi: string }[] => {
+  let stemIdx = HEAVENLY_STEMS.indexOf(getMonthStem(yearGan, '寅'));
+  return MONTH_BRANCHES.map(zhi => {
+    const gan = HEAVENLY_STEMS[stemIdx];
+    stemIdx = (stemIdx + 1) % 10;
+    return { gan, zhi };
+  });
+};
+
+// 五鼠遁：以日干推子时天干为起点，地支子→亥顺排，天干逐时+1
+const hourPillarList = (dayGan: string): { gan: string; zhi: string }[] => {
+  let stemIdx = HEAVENLY_STEMS.indexOf(getHourStem(dayGan, '子'));
+  return EARTHLY_BRANCHES.map(zhi => {
+    const gan = HEAVENLY_STEMS[stemIdx];
+    stemIdx = (stemIdx + 1) % 10;
+    return { gan, zhi };
+  });
+};
+
+// 干支五行配色
+const charColor = (char: string, isStem: boolean) => {
+  const element = isStem ? STEM_ELEMENTS[char] : BRANCH_ELEMENTS[char];
+  return ELEMENT_COLORS[element] || ELEMENT_COLORS.default;
+};
 
 const DateTimePickerModal: React.FC<{
   isOpen: boolean;
@@ -281,9 +322,10 @@ const DateTimePickerModal: React.FC<{
   initialSolar: SolarDT;
   initialLunar: LunarDT;
   initialDirect: DirectDT;
+  sect: 1 | 2;
   onClose: () => void;
   onConfirm: (tab: CalendarType, solar: SolarDT, lunar: LunarDT, direct: DirectDT) => void;
-}> = ({ isOpen, initialTab, initialSolar, initialLunar, initialDirect, onClose, onConfirm }) => {
+}> = ({ isOpen, initialTab, initialSolar, initialLunar, initialDirect, sect, onClose, onConfirm }) => {
   const [tab, setTab] = useState<CalendarType>(initialTab);
   const [solar, setSolar] = useState<SolarDT>(initialSolar);
   const [lunar, setLunar] = useState<LunarDT>(initialLunar);
@@ -291,6 +333,10 @@ const DateTimePickerModal: React.FC<{
   const [solarInput, setSolarInput] = useState('');
   const [inputError, setInputError] = useState('');
   const [directStep, setDirectStep] = useState(0);
+  // 四柱选齐后默认隐藏步骤选择区；点击总览格跳回某步时进入“编辑”态重新显示
+  const [directEditing, setDirectEditing] = useState(false);
+  // 匹配时间列表可选项（按 ymd-hms 字符串记录，重选四柱匹配变化时回退第一项）
+  const [selectedMatchKey, setSelectedMatchKey] = useState<string>('');
 
   useEffect(() => {
     if (isOpen) {
@@ -301,6 +347,9 @@ const DateTimePickerModal: React.FC<{
       setSolarInput('');
       setInputError('');
       setDirectStep(0);
+      setDirectEditing(false);
+      const prevMs = initialDirect.matchedSolar;
+      setSelectedMatchKey(prevMs ? `${prevMs.year}-${pad2(prevMs.month)}-${pad2(prevMs.day)} ${pad2(prevMs.hour)}:${pad2(prevMs.minute)}:00` : '');
     }
   }, [isOpen, initialTab, initialSolar, initialLunar, initialDirect]);
 
@@ -360,15 +409,67 @@ const DateTimePickerModal: React.FC<{
     setInputError('');
   };
 
-  const pickDirect = (key: DirectKey, v: string) => {
+  // 只写入当前步骤的选择，不自动填充后续干支：严格按顺序选，避免年支/月柱“自动出来”
+  // 若重选年干/日干（值发生变化），则清空依赖它的字段，强制重新选择
+  const pickDirect = (step: DirectStep, v: string) => {
     setDirect(prev => {
-      const next = { ...prev, [key]: v } as DirectDT;
-      next.monthGan = getMonthStem(next.yearGan, next.monthZhi);
-      next.hourGan = getHourStem(next.dayGan, next.hourZhi);
+      const next = { ...prev } as DirectDT;
+      if (step === 'yearGan') {
+        next.yearGan = v;
+        if (v !== prev.yearGan) {
+          next.yearZhi = '';
+          next.monthGan = '';
+          next.monthZhi = '';
+        }
+      } else if (step === 'yearZhi') {
+        next.yearZhi = v;
+      } else if (step === 'month') {
+        next.monthGan = v[0];
+        next.monthZhi = v[1];
+      } else if (step === 'dayGan') {
+        next.dayGan = v;
+        if (v !== prev.dayGan) {
+          next.dayZhi = '';
+          next.hourGan = '';
+          next.hourZhi = '';
+        }
+      } else if (step === 'dayZhi') {
+        next.dayZhi = v;
+      } else if (step === 'hour') {
+        next.hourGan = v[0];
+        next.hourZhi = v[1];
+      }
       return next;
     });
-    const stepIdx = DIRECT_STEPS.indexOf(key as (typeof DIRECT_STEPS)[number]);
+    const stepIdx = DIRECT_STEPS.indexOf(step);
     if (stepIdx >= 0) setDirectStep((stepIdx + 1) % DIRECT_STEPS.length);
+    setDirectEditing(false);
+  };
+
+  const isDirectComplete = !!(direct.yearGan && direct.yearZhi && direct.monthGan && direct.monthZhi && direct.dayGan && direct.dayZhi && direct.hourGan && direct.hourZhi);
+  // 四柱选齐后只保留匹配时间；点击总览格跳回时进入编辑态重新展示选项
+  const directPickerVisible = !isDirectComplete || directEditing;
+  const matches = useMemo(() => {
+    if (!isDirectComplete) return [] as Solar[];
+    return findAllSolarDatesFromBaZi(
+      direct.yearGan + direct.yearZhi,
+      direct.monthGan + direct.monthZhi,
+      direct.dayGan + direct.dayZhi,
+      direct.hourGan + direct.hourZhi,
+      sect
+    );
+  }, [isDirectComplete, direct, sect]);
+
+  // 匹配时间列表可选择：默认第一项；重选四柱后匹配变化时回退到第一项
+  const selectedMatchIndex = matches.findIndex((m) => m.toYmdHms() === selectedMatchKey);
+  const effectiveMatchIndex = matches.length > 0 && selectedMatchIndex < 0 ? 0 : selectedMatchIndex;
+  const selectedSolar = matches[effectiveMatchIndex];
+  const confirmDirect = () => {
+    const { matchedSolar: _old, ...rest } = direct;
+    const next: DirectDT = selectedSolar
+      ? { ...rest, matchedSolar: { year: selectedSolar.getYear(), month: selectedSolar.getMonth(), day: selectedSolar.getDay(), hour: selectedSolar.getHour(), minute: selectedSolar.getMinute() } }
+      : rest;
+    onConfirm(tab, solar, lunar, next);
   };
 
   if (!isOpen) return null;
@@ -379,21 +480,21 @@ const DateTimePickerModal: React.FC<{
   const solarMinuteItems = Array.from({ length: 60 }, (_, i) => ({ v: i, label: pad2(i) }));
   const lunarDayItems = Array.from({ length: lunarDayCount }, (_, i) => ({ v: i + 1, label: LUNAR_DAY_NAMES[i] || String(i + 1) }));
 
-  const directCellCls = (key: DirectKey, val: string, opts?: { locked?: boolean }) => {
-    const isStep = DIRECT_STEPS[directStep] === key;
-    if (opts?.locked) {
-      return 'w-7 h-7 md:w-8 md:h-8 flex items-center justify-center rounded-md border border-amber-200 bg-amber-50 text-amber-900 font-bold text-sm shadow-sm select-none';
+  const stepLabel = DIRECT_STEPS[directStep];
+  const currentStepPillar = STEP_PILLAR[stepLabel];
+  const jumpToStep = (step: DirectStep) => {
+    const idx = DIRECT_STEPS.indexOf(step);
+    if (idx >= 0) {
+      setDirectStep(idx);
+      setDirectEditing(true);
     }
-    return `w-7 h-7 md:w-8 md:h-8 flex items-center justify-center rounded-md border text-sm font-bold transition-all cursor-pointer select-none ${
-      isStep
-        ? 'border-amber-500 bg-amber-400/25 text-amber-900 ring-2 ring-amber-400/50'
-        : val === (direct as any)[key]
-          ? 'border-[#2b2320] bg-[#2b2320] text-white'
-          : 'border-stone-200 bg-white text-stone-500 hover:border-stone-300'
-    }`;
   };
 
-  const stepLabel = DIRECT_STEPS[directStep];
+  const clearDirect = () => {
+    setDirect({ yearGan: '', yearZhi: '', monthGan: '', monthZhi: '', dayGan: '', dayZhi: '', hourGan: '', hourZhi: '' });
+    setDirectStep(0);
+    setDirectEditing(false);
+  };
 
   return createPortal(
     <div
@@ -402,12 +503,11 @@ const DateTimePickerModal: React.FC<{
     >
       <div className="bg-[#fdfcf8] w-full max-w-lg rounded-t-[2.5rem] shadow-2xl overflow-hidden flex flex-col animate-slide-up border-t border-stone-200">
         <div className="flex items-center justify-between px-6 pt-6 pb-4">
-          <button onClick={onClose} className="text-stone-400 text-lg hover:text-stone-600 transition-colors">取消</button>
-          <div className="text-sm font-bold text-stone-500">选择出生日期</div>
+          <button onClick={onClose} className="text-stone-400 text-xl font-bold hover:text-stone-600 transition-colors">取消</button>
           <div className="w-8"></div>
         </div>
 
-        {/* 模式 Tab（与顶部排盘模式联动） */}
+        {/* 模式 Tab：公历 / 农历 / 四柱 可自由切换 */}
         <div className="px-6 pb-3">
           <div className="flex bg-stone-100 p-1 rounded-xl">
             {[
@@ -474,50 +574,244 @@ const DateTimePickerModal: React.FC<{
           <div className="px-4 pb-4">
             <div className="flex items-center justify-between px-1 pb-2">
               <span className="text-[10px] font-bold text-stone-400 uppercase tracking-widest">四柱录入</span>
-              <span className="flex items-center gap-1 text-[10px] font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200">
-                <Lock size={10} />
-                请选择「{stepLabel === 'yearGan' ? '年柱天干' : stepLabel === 'yearZhi' ? '年柱地支' : stepLabel === 'monthZhi' ? '月柱地支' : stepLabel === 'dayGan' ? '日柱天干' : stepLabel === 'dayZhi' ? '日柱地支' : '时柱地支'}」
-              </span>
             </div>
-            <div className="grid grid-cols-4 gap-1.5">
+
+            {/* 四柱总览：点击任意干/支格可跳回该步骤 */}
+            <div className="grid grid-cols-4 gap-1.5 mb-3">
               {(['year', 'month', 'day', 'hour'] as const).map((p, colIdx) => {
                 const label = ['年柱', '月柱', '日柱', '时柱'][colIdx];
                 const ganKey = `${p}Gan` as DirectKey;
                 const zhiKey = `${p}Zhi` as DirectKey;
-                const ganLocked = p === 'month' || p === 'hour';
+                const gStep: DirectStep = p === 'year' ? 'yearGan' : p === 'month' ? 'month' : p === 'day' ? 'dayGan' : 'hour';
+                const zStep: DirectStep = p === 'year' ? 'yearZhi' : p === 'month' ? 'month' : p === 'day' ? 'dayZhi' : 'hour';
+                const active = currentStepPillar === p;
+                const cellCls = (char: string, isStem: boolean, isActive: boolean) => {
+                  const c = charColor(char, isStem);
+                  return `w-10 h-10 md:w-12 md:h-12 flex items-center justify-center rounded-full border-2 text-lg md:text-xl font-bold transition-all select-none ${c.bg} ${c.border} ${c.text} ${
+                    isActive ? 'ring-2 ring-amber-400/70 shadow-sm' : ''
+                  }`;
+                };
                 return (
-                  <div key={p} className="flex flex-col gap-1 bg-stone-50/80 rounded-xl p-1.5">
-                    <div className="text-center text-[10px] font-bold text-stone-400 tracking-wider">{label}</div>
-                    {ganLocked ? (
-                      <div className="w-full h-7 flex items-center justify-center rounded-md border border-amber-200 bg-amber-50 text-amber-900 font-bold text-sm relative select-none">
-                        {(direct as any)[ganKey]}
-                        <div className="absolute top-0 right-0 p-0.5"><div className="w-1 h-1 bg-amber-400 rounded-full"></div></div>
-                      </div>
-                    ) : (
-                      <div className="flex flex-wrap justify-center gap-0.5">
-                        {HEAVENLY_STEMS.map(s => (
-                          <button key={s} type="button" onClick={() => pickDirect(ganKey, s)} className={directCellCls(ganKey, s)}>{s}</button>
-                        ))}
-                      </div>
-                    )}
-                    <div className="text-center text-[8px] text-stone-300 leading-none">天干</div>
-                    <div className="flex flex-wrap justify-center gap-0.5">
-                      {EARTHLY_BRANCHES.map(b => (
-                        <button key={b} type="button" onClick={() => pickDirect(zhiKey, b)} className={directCellCls(zhiKey, b)}>{b}</button>
-                      ))}
+                  <div key={p} className={`flex flex-col items-center gap-1 rounded-xl border p-1.5 pt-2 transition-all ${
+                    active ? 'border-amber-400 bg-amber-50/70 ring-1 ring-amber-300' : 'border-stone-200/70 bg-white'
+                  }`}>
+                    <span className={`text-[10px] font-bold tracking-wider ${active ? 'text-amber-700' : 'text-stone-400'}`}>{label}</span>
+                    <div className="flex flex-col gap-1">
+                      <button type="button" onClick={() => jumpToStep(gStep)} className={cellCls((direct as any)[ganKey], true, stepLabel === gStep)}>
+                        {(direct as any)[ganKey] || ''}
+                      </button>
+                      <button type="button" onClick={() => jumpToStep(zStep)} className={cellCls((direct as any)[zhiKey], false, stepLabel === zStep)}>
+                        {(direct as any)[zhiKey] || ''}
+                      </button>
                     </div>
-                    <div className="text-center text-[8px] text-stone-300 leading-none">地支</div>
                   </div>
                 );
               })}
             </div>
-            <p className="text-[10px] text-stone-400 font-bold px-1 pt-2">月柱天干、时柱天干已按「五虎遁 / 五鼠遁」自动锁定</p>
+
+            {/* 查找范围 + 清除 */}
+            <div className="flex items-center justify-between px-1 mb-3">
+              <span className="text-sm font-bold text-stone-500">查找范围：1900-2100</span>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={confirmDirect}
+                  disabled={!isDirectComplete}
+                  className={`flex items-center gap-1 text-sm font-bold px-4 py-1.5 rounded-full active:scale-95 transition-all ${
+                    isDirectComplete ? 'text-white bg-[#2b2320] border border-[#2b2320] shadow' : 'text-stone-400 bg-stone-100 border border-stone-200'
+                  }`}
+                >
+                  确认
+                </button>
+                <button
+                  type="button"
+                  onClick={clearDirect}
+                  className="flex items-center gap-1 text-sm font-bold text-rose-500 bg-rose-50 border border-rose-200 px-4 py-1.5 rounded-full active:scale-95 transition-all"
+                >
+                  清除
+                </button>
+              </div>
+            </div>
+
+            {/* 当前步骤选择区：四柱选齐后隐藏，只保留匹配时间列表 */}
+            {directPickerVisible && (<>
+            {(stepLabel === 'yearGan' || stepLabel === 'dayGan') && (
+              (() => {
+                if (stepLabel === 'dayGan' && !(direct.monthGan && direct.monthZhi)) {
+                  return (
+                    <div className="rounded-2xl bg-stone-50/80 border border-stone-100 p-6 text-center text-xs font-bold text-stone-400">请先选择月柱，再选择日柱天干</div>
+                  );
+                }
+                return (
+                  <div className="rounded-2xl bg-stone-50/80 border border-stone-100 p-3">
+                    <div className="text-center text-[10px] font-bold text-stone-400 mb-2">选择天干</div>
+                    <div className="grid grid-cols-5 gap-2">
+                      {HEAVENLY_STEMS.map(s => {
+                        const sel = s === (direct as any)[stepLabel];
+                        const c = charColor(s, true);
+                        return (
+                          <button
+                            key={s}
+                            type="button"
+                            onClick={() => pickDirect(stepLabel, s)}
+                            className={`h-12 rounded-xl border text-lg font-bold transition-all active:scale-95 select-none ${
+                              sel ? 'border-[#2b2320] bg-[#2b2320] text-white shadow' : `${c.bg} ${c.border} ${c.text}`
+                            }`}
+                          >
+                            {s}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })()
+            )}
+
+            {(stepLabel === 'yearZhi' || stepLabel === 'dayZhi') && (
+              (() => {
+                const stem = stepLabel === 'yearZhi' ? direct.yearGan : direct.dayGan;
+                if (!stem) {
+                  return (
+                    <div className="rounded-2xl bg-stone-50/80 border border-stone-100 p-6 text-center text-xs font-bold text-stone-400">
+                      请先选择{stepLabel === 'yearZhi' ? '年柱天干' : '日柱天干'}，再选择地支
+                    </div>
+                  );
+                }
+                const options = branchesForStem(stem);
+                return (
+                  <div className="rounded-2xl bg-stone-50/80 border border-stone-100 p-3">
+                    <div className="text-center text-[10px] font-bold text-stone-400 mb-2">{isYangStem(stem) ? '阳干配阳支' : '阴干配阴支'} · 选择地支</div>
+                    <div className="grid grid-cols-3 gap-2">
+                      {options.map(b => {
+                        const sel = b === (direct as any)[stepLabel];
+                        const c = charColor(b, false);
+                        return (
+                          <button
+                            key={b}
+                            type="button"
+                            onClick={() => pickDirect(stepLabel, b)}
+                            className={`h-12 rounded-xl border text-lg font-bold transition-all active:scale-95 select-none ${
+                              sel ? 'border-[#2b2320] bg-[#2b2320] text-white shadow' : `${c.bg} ${c.border} ${c.text}`
+                            }`}
+                          >
+                            {b}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })()
+            )}
+
+            {stepLabel === 'month' && (
+              (() => {
+                if (!direct.yearZhi) {
+                  return (
+                    <div className="rounded-2xl bg-stone-50/80 border border-stone-100 p-6 text-center text-xs font-bold text-stone-400">请先选择年柱地支，再选择月柱</div>
+                  );
+                }
+                return (
+                  <div className="rounded-2xl bg-stone-50/80 border border-stone-100 p-3">
+                    <div className="text-center text-[10px] font-bold text-stone-400 mb-2">十二个月柱 · 按五虎遁推算</div>
+                    <div className="grid grid-cols-6 gap-2">
+                      {monthPillarList(direct.yearGan).map(p => {
+                        const sel = p.gan === direct.monthGan && p.zhi === direct.monthZhi;
+                        const gc = charColor(p.gan, true);
+                        const zc = charColor(p.zhi, false);
+                        return (
+                          <button
+                            key={p.gan + p.zhi}
+                            type="button"
+                            onClick={() => pickDirect('month', p.gan + p.zhi)}
+                            className={`h-12 rounded-xl border text-base font-bold transition-all active:scale-95 select-none ${
+                              sel ? 'border-[#2b2320] bg-[#2b2320] text-white shadow' : 'border-stone-200 bg-white text-stone-600'
+                            }`}
+                          >
+                            <span className={sel ? 'text-white' : gc.text}>{p.gan}</span><span className={sel ? 'text-white' : zc.text}>{p.zhi}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })()
+            )}
+
+            {stepLabel === 'hour' && (
+              (() => {
+                if (!direct.dayZhi) {
+                  return (
+                    <div className="rounded-2xl bg-stone-50/80 border border-stone-100 p-6 text-center text-xs font-bold text-stone-400">请先选择日柱地支，再选择时柱</div>
+                  );
+                }
+                return (
+                  <div className="rounded-2xl bg-stone-50/80 border border-stone-100 p-3">
+                    <div className="text-center text-[10px] font-bold text-stone-400 mb-2">十二个时柱 · 按五鼠遁推算</div>
+                    <div className="grid grid-cols-6 gap-2">
+                      {hourPillarList(direct.dayGan).map(p => {
+                        const sel = p.gan === direct.hourGan && p.zhi === direct.hourZhi;
+                        const gc = charColor(p.gan, true);
+                        const zc = charColor(p.zhi, false);
+                        return (
+                          <button
+                            key={p.gan + p.zhi}
+                            type="button"
+                            onClick={() => pickDirect('hour', p.gan + p.zhi)}
+                            className={`h-12 rounded-xl border text-base font-bold transition-all active:scale-95 select-none ${
+                              sel ? 'border-[#2b2320] bg-[#2b2320] text-white shadow' : 'border-stone-200 bg-white text-stone-600'
+                            }`}
+                          >
+                            <span className={sel ? 'text-white' : gc.text}>{p.gan}</span><span className={sel ? 'text-white' : zc.text}>{p.zhi}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })()
+            )}
+            </>)}
+
+            {/* 匹配时间列表：四柱选齐且未进入编辑态时显示 */}
+            {isDirectComplete && !directEditing && (
+              <div className="mt-3 rounded-2xl bg-stone-50/80 border border-stone-100 p-3">
+                <div className="text-center text-xs font-bold text-stone-500 mb-2">匹配时间（1900-2100）</div>
+                {matches.length === 0 ? (
+                  <div className="text-center text-xs text-stone-400 py-3">范围内无匹配时间</div>
+                ) : (
+                  <div className="max-h-52 overflow-y-auto no-scrollbar space-y-1.5">
+                    {matches.map((m, i) => {
+                      const l = m.getLunar();
+                      const isSelected = effectiveMatchIndex === i;
+                      return (
+                        <button
+                          key={m.toYmdHms()}
+                          type="button"
+                          onClick={() => setSelectedMatchKey(m.toYmdHms())}
+                          className={`w-full text-left flex flex-col gap-0.5 rounded-lg border px-3 py-2 transition-all active:scale-[0.99] ${
+                            isSelected ? 'border-[#b39b7d] bg-[#b39b7d] text-white shadow' : 'bg-white border-stone-100 hover:border-stone-300'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between gap-2">
+                            <span className={`text-xs font-bold ${isSelected ? 'text-white' : 'text-stone-700'}`}>阳历：{m.toYmdHms().slice(0, 16)}</span>
+                            {isSelected && <span className="text-[10px] font-bold text-white">已选 ✓</span>}
+                          </div>
+                          <div className={`text-[11px] ${isSelected ? 'text-white/90' : 'text-stone-500'}`}>阴历：{l.getYearInChinese()}年{l.getMonthInChinese()}月{l.getDayInChinese()} {l.getTimeZhi()}时</div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         )}
 
         <div className="p-5 bg-white border-t border-stone-100">
           <button
-            onClick={() => onConfirm(tab, solar, lunar, direct)}
+            onClick={confirmDirect}
             className="w-full py-4 bg-[#2b2320] text-white rounded-full text-lg font-bold shadow-lg active:scale-95 transition-all"
           >
             确定
@@ -575,10 +869,10 @@ const InputForm: React.FC<InputFormProps> = React.memo(({ onCalculate }) => {
     year: new Date().getFullYear(), month: new Date().getMonth() + 1, day: new Date().getDate(), hour: new Date().getHours(), minute: new Date().getMinutes()
   }));
   const [directData, setDirectData] = useState<DirectDT>({
-    yearGan: '甲', yearZhi: '子',
-    monthGan: '丙', monthZhi: '寅',
-    dayGan: '甲', dayZhi: '子',
-    hourGan: '甲', hourZhi: '子'
+    yearGan: '', yearZhi: '',
+    monthGan: '', monthZhi: '',
+    dayGan: '', dayZhi: '',
+    hourGan: '', hourZhi: ''
   });
   const [useTrueSolarTime, setUseTrueSolarTime] = useState(true);
   const [longitude, setLongitude] = useState('116.42');
@@ -658,11 +952,26 @@ const InputForm: React.FC<InputFormProps> = React.memo(({ onCalculate }) => {
       const l = Lunar.fromYmdHms(lunarDt.year, lunarDt.leap ? -lunarDt.month : lunarDt.month, lunarDt.day, lunarDt.hour, lunarDt.minute, 0);
       return `${l.getYearInGanZhi()}年 ${l.getMonthInChinese()}月 ${l.getDayInChinese()} ${l.getTimeZhi()}时`;
     }
-    return `${directData.yearGan}${directData.yearZhi}年 ${directData.monthGan}${directData.monthZhi}月 ${directData.dayGan}${directData.dayZhi}日 ${directData.hourGan}${directData.hourZhi}时`;
+    const dChar = (c: string, isStem: boolean) => {
+      const col = charColor(c, isStem);
+      return <span className={`font-bold ${col.text}`}>{c}</span>;
+    };
+    return (
+      <span className="inline-flex items-center whitespace-nowrap">
+        <span>{dChar(directData.yearGan, true)}{dChar(directData.yearZhi, false)}年 </span>
+        <span>{dChar(directData.monthGan, true)}{dChar(directData.monthZhi, false)}月 </span>
+        <span>{dChar(directData.dayGan, true)}{dChar(directData.dayZhi, false)}日 </span>
+        <span>{dChar(directData.hourGan, true)}{dChar(directData.hourZhi, false)}时</span>
+      </span>
+    );
   }, [calendarType, solarDt, lunarDt, directData]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (calendarType === CalendarType.DIRECT && (!directData.yearGan || !directData.yearZhi || !directData.monthGan || !directData.monthZhi || !directData.dayGan || !directData.dayZhi || !directData.hourGan || !directData.hourZhi)) {
+      showToast('请先完成四柱选择');
+      return;
+    }
     setIsCalculating(true);
     // 手动经度优先，否则用地点经度
     const finalLongitude = useManualLongitude && manualLongitude.trim() !== '' ? parseFloat(manualLongitude) : (parseFloat(longitude) || 120.0);
@@ -720,7 +1029,7 @@ const InputForm: React.FC<InputFormProps> = React.memo(({ onCalculate }) => {
                     {t: CalendarType.LUNAR, l: '农历'},
                     {t: CalendarType.DIRECT, l: '四柱'}
                   ].map(item => (
-                    <button key={item.t} type="button" onClick={() => setCalendarType(item.t)} className={`flex-1 py-1.5 rounded-lg text-[10px] md:text-xs font-bold transition-all ${calendarType === item.t ? 'bg-[#b39b7d] text-white shadow-md' : 'text-stone-400 hover:text-stone-500'}`}>
+                    <button key={item.t} type="button" onClick={() => { setCalendarType(item.t); setIsDatePickerOpen(true); }} className={`flex-1 py-1.5 rounded-lg text-[10px] md:text-xs font-bold transition-all ${calendarType === item.t ? 'bg-[#b39b7d] text-white shadow-md' : 'text-stone-400 hover:text-stone-500'}`}>
                       {item.l}
                     </button>
                   ))}
@@ -743,8 +1052,7 @@ const InputForm: React.FC<InputFormProps> = React.memo(({ onCalculate }) => {
                 <ChevronRight size={14} className="text-stone-300 shrink-0" />
               </button>
             </div>
-            {calendarType !== CalendarType.DIRECT && (
-              <div className="flex flex-col gap-1.5">
+            <div className="flex flex-col gap-1.5">
                 <span className="text-[10px] font-bold text-stone-400 uppercase tracking-widest ml-1">出生地点</span>
                 <button onClick={() => setIsPickerOpen(true)} className="flex items-center justify-between bg-stone-100 p-2 rounded-xl text-stone-700 font-bold text-xs md:text-sm w-full group overflow-hidden border border-transparent hover:border-stone-200 transition-colors">
                     <div className="flex items-center gap-2 min-w-0">
@@ -759,7 +1067,6 @@ const InputForm: React.FC<InputFormProps> = React.memo(({ onCalculate }) => {
                   </p>
                 )}
               </div>
-            )}
           </div>
         </div>
 
@@ -882,6 +1189,7 @@ const InputForm: React.FC<InputFormProps> = React.memo(({ onCalculate }) => {
         initialSolar={solarDt}
         initialLunar={lunarDt}
         initialDirect={directData}
+        sect={sect}
         onClose={() => setIsDatePickerOpen(false)}
         onConfirm={(tab, s, l, d) => {
           setCalendarType(tab);

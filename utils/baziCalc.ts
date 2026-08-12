@@ -393,6 +393,61 @@ const findSolarDateFromBaZi = (
     return null;
 };
 
+/**
+ * 根据八字干支反查全部匹配的阳历时间（1900-2100，升序）。
+ * 过去段（1900→今天）复用内置 Solar.fromBaZi；未来段（今天→2100）沿用年柱预筛 + 逐日扫描。
+ */
+export const findAllSolarDatesFromBaZi = (
+    yearGZ: string, monthGZ: string, dayGZ: string, hourGZ: string, sect = 2
+): Solar[] => {
+    const now = new Date();
+    const nowYmdHms = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
+    const results: Solar[] = [];
+    const seen = new Set<string>();
+
+    // 过去段：1900 → 现在（内置优化算法，升序）
+    const past = Solar.fromBaZi(yearGZ, monthGZ, dayGZ, hourGZ, sect, 1900);
+    for (const s of past) {
+        if (s.toYmdHms() > nowYmdHms) continue;
+        const key = s.toYmdHms();
+        if (seen.has(key)) continue;
+        seen.add(key);
+        results.push(s);
+    }
+
+    // 未来段：今天 → 2100
+    const todayYmd = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    for (let Y = now.getFullYear(); Y <= 2100; Y++) {
+        const yearGanZhi = Solar.fromYmdHms(Y, 6, 1, 12, 0, 0).getLunar().getEightChar().getYear();
+        if (yearGanZhi !== yearGZ) continue;
+
+        let d = Solar.fromYmdHms(Y, 1, 1, 0, 0, 0);
+        const endYmd = `${Y}-12-31`;
+        while (d.toYmd() <= endYmd) {
+            if (d.toYmd() >= todayYmd) {
+                const ec = d.getLunar().getEightChar();
+                if (ec.getYear() === yearGZ &&
+                    ec.getMonth() === monthGZ &&
+                    ec.getDay() === dayGZ) {
+                    for (let h = 22; h >= 0; h -= 2) {
+                        const hSolar = Solar.fromYmdHms(d.getYear(), d.getMonth(), d.getDay(), h, 0, 0);
+                        if (hSolar.getLunar().getEightChar().getTime() === hourGZ) {
+                            const key = hSolar.toYmdHms();
+                            if (seen.has(key)) continue;
+                            seen.add(key);
+                            results.push(hSolar);
+                        }
+                    }
+                }
+            }
+            d = d.next(1);
+        }
+    }
+
+    results.sort((a, b) => (a.toYmdHms() < b.toYmdHms() ? -1 : 1));
+    return results;
+};
+
 export const calculateBaZi = (
   year: number, month: number, day: number, hour: number, minute: number, gender: Gender,
   type: CalendarType, directData?: any, useTrueSolarTime?: boolean, longitude?: number,
@@ -410,7 +465,19 @@ export const calculateBaZi = (
       const dayGZ = String(directData.dayGan) + String(directData.dayZhi);
       const hourGZ = String(directData.hourGan) + String(directData.hourZhi);
 
-      const foundSolar = findSolarDateFromBaZi(yearGZ, monthGZ, dayGZ, hourGZ, sect);
+      // 用户从匹配时间列表中选定具体时间时，按该时间排盘
+      let foundSolar: Solar | null = null;
+      const ms = directData.matchedSolar as { year?: number; month?: number; day?: number; hour?: number; minute?: number } | undefined;
+      if (ms && ms.year && ms.month && ms.day && typeof ms.hour === 'number') {
+          try {
+              foundSolar = Solar.fromYmdHms(ms.year, ms.month, ms.day, ms.hour, ms.minute || 0, 0);
+          } catch {
+              foundSolar = null;
+          }
+      }
+      if (!foundSolar) {
+          foundSolar = findSolarDateFromBaZi(yearGZ, monthGZ, dayGZ, hourGZ, sect);
+      }
       if (foundSolar) {
           solar = foundSolar;
           lunar = solar.getLunar();
