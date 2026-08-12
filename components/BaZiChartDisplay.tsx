@@ -3,7 +3,7 @@ import React, { useMemo, useState } from 'react';
 import { BaZiChart, PillarData, ShenShaItem, LuckPillar } from '../types';
 import { ELEMENT_COLORS } from '../constants';
 import { getElement, getShiShenByName, getXingYun, HIDE_STEMS, getNaYinByGanZhi, getXunKongByGanZhi } from '../utils/baziCalc';
-import { AlertTriangle, Calendar } from 'lucide-react';
+import { AlertTriangle, Calendar, ChevronUp, ChevronDown } from 'lucide-react';
 
 interface BaZiChartDisplayProps {
   chart: BaZiChart;
@@ -50,18 +50,24 @@ const GridCell: React.FC<{ className?: string; children?: React.ReactNode }> = (
   </div>
 );
 
-const PillarGrid: React.FC<{ cols: ColData[]; showShenSha?: boolean; pro?: boolean; isMale?: boolean }> = ({ cols, showShenSha, pro, isMale }) => {
+const PillarGrid: React.FC<{ cols: ColData[]; showShenSha?: boolean; pro?: boolean; isMale?: boolean; collapsible?: boolean; highlightFourPillars?: boolean }> = ({ cols, showShenSha, pro, isMale, collapsible, highlightFourPillars }) => {
+  const [expanded, setExpanded] = useState(!collapsible);
   const labelCol = pro ? '2rem' : '3rem';
   const gridCols = `grid border-stone-200`;
   const gridStyle = { gridTemplateColumns: `${labelCol} repeat(${cols.length}, 1fr)` };
-  const big = pro ? 'text-base md:text-3xl' : 'text-2xl md:text-4xl';
-  const stack = pro ? 'text-[8px] md:text-sm' : 'text-[10px] md:text-base';
+  const big = pro ? 'text-xl md:text-4xl' : 'text-2xl md:text-4xl';
+  const stack = pro ? 'text-[11px] md:text-base' : 'text-[10px] md:text-base';
+  const headerCls = pro ? 'text-sm md:text-lg' : 'text-[11px] md:text-base';
+  const headerSubCls = pro ? 'text-[10px] md:text-sm' : 'text-[8px] md:text-[11px]';
+  const rowLabelCls = pro ? 'text-xs md:text-sm' : 'text-[10px] md:text-xs';
+  const isFourPillarCol = (label: string): boolean =>
+    highlightFourPillars === true && ['年柱', '月柱', '日柱', '时柱'].includes(label);
 
   const rows: { label: string; cells: (c: ColData) => React.ReactNode }[] = [
     {
       label: '主星',
       cells: c => c.data ? (
-        <span className={`text-[10px] md:text-sm font-bold tracking-widest rounded-full px-2 py-0.5 border ${
+        <span className={`${pro ? 'text-xs md:text-base' : 'text-[10px] md:text-sm'} font-bold tracking-widest rounded-full px-2 py-0.5 border ${
           c.isDayMaster
             ? isMale
               ? 'bg-sky-50 text-sky-700 border-sky-200'
@@ -139,22 +145,49 @@ const PillarGrid: React.FC<{ cols: ColData[]; showShenSha?: boolean; pro?: boole
       <div className="md:min-w-0 border-t border-l border-stone-200">
         {/* 日期行（表头） */}
         <div className={gridCols} style={gridStyle}>
-          <div className={`bg-stone-50 flex items-center justify-center text-[10px] md:text-xs font-bold text-stone-400 tracking-widest border-b border-r border-stone-200 px-0.5 py-1.5`}>日期</div>
-          {cols.map((c, i) => (
-            <div key={i} className="flex flex-col items-center justify-center border-b border-r border-stone-200 px-0.5 py-1">
-              <span className="text-[11px] md:text-base font-bold text-stone-800 tracking-widest">{c.label}</span>
-              {c.sub && <span className="text-[8px] md:text-[11px] text-stone-400 font-mono">{c.sub}</span>}
-            </div>
-          ))}
-        </div>
-        {rows.map((row, ri) => (
-          <div key={ri} className={gridCols} style={gridStyle}>
-            <div className={`bg-stone-50 flex items-center justify-center text-[10px] md:text-xs font-bold text-stone-400 tracking-widest border-b border-r border-stone-200 px-0.5 py-1.5`}>{row.label}</div>
-            {cols.map((c, i) => (
-              <GridCell key={i}>{row.cells(c)}</GridCell>
-            ))}
+          <div className={`bg-stone-50 flex items-center justify-center ${rowLabelCls} font-bold text-stone-400 tracking-widest border-b border-r border-stone-200 px-0.5 py-1.5`}>
+            {collapsible ? (
+              <button
+                type="button"
+                onClick={() => setExpanded(!expanded)}
+                className="flex items-center gap-0.5 hover:text-[#b39b7d] transition-colors"
+                title={expanded ? '收起辅助信息' : '展开辅助信息'}
+              >
+                <span>日期</span>
+                {expanded ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+              </button>
+            ) : '日期'}
           </div>
-        ))}
+          {cols.map((c, i) => {
+            const fp = isFourPillarCol(c.label);
+            const isYearCol = c.label === '年柱';
+            const isHourCol = c.label === '时柱';
+            return (
+              <div key={i} className={`flex flex-col items-center justify-center border-b border-r border-stone-200 px-0.5 py-1 ${fp ? 'bg-amber-50/40' : ''} ${isYearCol ? 'border-l-2 border-amber-300/70' : ''} ${isHourCol ? 'border-r-2 border-amber-300/70' : ''}`}>
+                <span className={`${headerCls} font-bold tracking-widest ${fp ? 'text-amber-800' : 'text-stone-800'}`}>{c.label}</span>
+                {c.sub && <span className={`${headerSubCls} text-stone-400 font-mono`}>{c.sub}</span>}
+              </div>
+            );
+          })}
+        </div>
+        {rows.map((row, ri) => {
+          if (collapsible && ri > 2 && !expanded) return null;
+          return (
+            <div key={ri} className={gridCols} style={gridStyle}>
+              <div className={`bg-stone-50 flex items-center justify-center ${rowLabelCls} font-bold text-stone-400 tracking-widest border-b border-r border-stone-200 px-0.5 py-1.5`}>{row.label}</div>
+              {cols.map((c, i) => {
+                const fp = isFourPillarCol(c.label);
+                const isYearCol = c.label === '年柱';
+                const isHourCol = c.label === '时柱';
+                return (
+                  <GridCell key={i} className={`${fp ? 'bg-amber-50/40' : ''} ${isYearCol ? 'border-l-2 border-amber-300/70' : ''} ${isHourCol ? 'border-r-2 border-amber-300/70' : ''}`}>
+                    {row.cells(c)}
+                  </GridCell>
+                );
+              })}
+            </div>
+          );
+        })}
       </div>
     </div>
   );
@@ -245,15 +278,15 @@ const ProPanel: React.FC<{ chart: BaZiChart }> = ({ chart }) => {
   return (
     <div className="p-3 md:p-6 bg-white space-y-5">
       <section>
-        <SectionTitle hint="（流年＝当年干支，大运＝当前所行大运）">六柱细盘</SectionTitle>
-        <PillarGrid cols={cols} showShenSha pro isMale={chart.gender === '乾造 (男)'} />
+        <SectionTitle hint="（点「日期」可折叠辅助信息）">六柱细盘</SectionTitle>
+        <PillarGrid cols={cols} showShenSha pro collapsible highlightFourPillars isMale={chart.gender === '乾造 (男)'} />
       </section>
 
       <section>
         {chart.luckPillars.length > 0 ? (
           <div className="bg-[#fdfdfb] flex flex-col select-none border border-stone-200 rounded-lg overflow-hidden">
             {/* 大运总览：顺行/逆行 + 起运 + 交运 + 司令 */}
-            <div className="px-3 md:px-4 py-2 bg-stone-50 border-b border-stone-200 flex flex-wrap items-center gap-x-4 gap-y-1 text-[10px] md:text-sm leading-tight">
+            <div className="px-3 md:px-4 py-2 bg-stone-50 border-b border-stone-200 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs md:text-sm leading-tight">
               <span className="flex items-center gap-1.5">
                 <span className="text-stone-400">大运:</span>
                 <span className="font-bold text-amber-800">{chart.yunDirection || '—'}</span>
@@ -280,14 +313,14 @@ const ProPanel: React.FC<{ chart: BaZiChart }> = ({ chart }) => {
                 <Calendar size={14} />
                 <span>运限推演</span>
                 {xuSui && (
-                  <span className="text-[10px] md:text-xs font-bold text-amber-900 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200/50">
+                  <span className="text-xs md:text-sm font-bold text-amber-900 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200/50">
                     虚岁 {xuSui} 岁
                   </span>
                 )}
               </div>
               <div className="flex items-center gap-2">
                 {selectedYear && (
-                  <span className="text-[10px] md:text-xs font-bold text-amber-900 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200/50">
+                  <span className="text-xs md:text-sm font-bold text-amber-900 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200/50">
                     {selectedYear}年
                   </span>
                 )}
@@ -316,11 +349,11 @@ const ProPanel: React.FC<{ chart: BaZiChart }> = ({ chart }) => {
                       py-1 text-center border-b flex flex-col justify-center transition-colors
                       ${isSelectedLuck ? 'bg-amber-100/30' : (isCurrentDaYun ? 'bg-amber-50/20' : 'bg-stone-50/20')}
                     `}>
-                      <span className="text-[8px] md:text-xs text-stone-400 font-mono leading-none">{lp.startYear}</span>
-                      <span className={`text-[11px] md:text-2xl font-bold leading-none my-0.5 ${isSelectedLuck || isCurrentDaYun ? 'text-amber-900' : 'text-stone-700'}`}>
+                      <span className="text-[10px] md:text-xs text-stone-400 font-mono leading-none">{lp.startYear}</span>
+                      <span className={`text-sm md:text-2xl font-bold leading-none my-0.5 ${isSelectedLuck || isCurrentDaYun ? 'text-amber-900' : 'text-stone-700'}`}>
                         {isPreLuck ? '小运' : `${lp.gan}${lp.zhi}`}
                       </span>
-                      <span className="text-[8px] md:text-[10px] text-stone-400 leading-none">{lp.startAge}岁</span>
+                      <span className="text-[10px] md:text-[10px] text-stone-400 leading-none">{lp.startAge}岁</span>
                     </div>
 
                     <div className="flex flex-col">
@@ -336,7 +369,7 @@ const ProPanel: React.FC<{ chart: BaZiChart }> = ({ chart }) => {
                               setSelectedLuckIdx(idx);
                             }}
                             className={`
-                              flex justify-center items-center py-[3px] md:py-2 text-[9px] md:text-lg transition-all duration-200 border-b border-stone-50/50
+                              flex justify-center items-center py-[3px] md:py-2 text-[11px] md:text-lg transition-all duration-200 border-b border-stone-50/50
                               ${isUserSelectedYear
                                 ? 'bg-amber-500 text-white z-10 font-bold'
                                 : isRealCurrentYear
@@ -363,7 +396,7 @@ const ProPanel: React.FC<{ chart: BaZiChart }> = ({ chart }) => {
 };
 
 const BaZiChartDisplay: React.FC<BaZiChartDisplayProps> = React.memo(({ chart }) => {
-  const [viewTab, setViewTab] = useState<'BASIC' | 'PRO'>('BASIC');
+  const [viewTab, setViewTab] = useState<'BASIC' | 'PRO'>('PRO');
   const solarDateStr = String(chart.solarDate || '');
   const isMatchingFailed = solarDateStr.includes('失败');
 
